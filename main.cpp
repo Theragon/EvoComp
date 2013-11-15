@@ -17,7 +17,6 @@ struct Individual
 };
 
 void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e, int& f);
-//void initialisePop(vector<double>& population);
 void initialisePop(vector<Individual>& population);
 double fitnessCheck(int options, vector<double> population2);
 double f1(const vector<double>& xs);
@@ -40,19 +39,16 @@ int main()
 
 
 	readFile(populationSize, fitnessFunction, c, d, e, f);
-
-	//vector<Individual> population;// { -2.0 , -1.0 , 0.0 , 1.0 , 2.0 };
-	//vector<double> population;
 	initialisePop(population);
 
 	for(int i=0; i<populationSize; i++)
 	{
 		cout << "Individual number: " << i << " : ";
+		cout << " fitness = " << population[i].fitness << " ";
 		for(int j=0; j<1; j++)
 		{
-			cout << population[i].solution[j] << endl;
+			cout << "solution : " << population[i].solution[j] << endl;
 		}
-//		cout << population[i].solution[0] << endl;
 	}
 
 	//TODO: Select individuals for mating
@@ -82,23 +78,15 @@ void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e,
     getchar();
 }
 
-//void initialisePop(vector<double>& population)
 void initialisePop(vector<Individual>& population)
 {
 	for(int i=0; i<populationSize; i++)	// initialize population
 	{
+		double rndtmp = test.random();
 		Individual individual;
+		individual.solution.push_back(rndtmp);
+		individual.fitness = f1(individual.solution);
 		population.push_back(individual);
-
-		//double tmp = fRand(0.0 , 10.0);
-//		double tmp = fRand();
-//		double tmp = test.random();
-//		population[i].solution[0].push_back(tmp);
-	}
-
-	for(int i=0; i<populationSize; i++)
-	{
-		population[i].solution.push_back(test.random());
 	}
 }
 
