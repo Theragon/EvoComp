@@ -8,8 +8,17 @@
 
 using namespace std;
 
+struct Individual
+{
+	double fitness;
+	double dGenes;
+	vector<int> bGenes;
+	vector<double> solution;
+};
+
 void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e, int& f);
-void initialisePop(vector<double>& population);
+//void initialisePop(vector<double>& population);
+void initialisePop(vector<Individual>& population);
 double fitnessCheck(int options, vector<double> population2);
 double f1(const vector<double>& xs);
 double f2(const vector<double>& xs);
@@ -19,12 +28,9 @@ const int _f1_ = 1;
 const int _f2_ = 2;
 int populationSize;
 
-struct Individual
-{
-	double fitness;
-	double dGenes;
-	vector<int> bGenes;
-};
+vector<Individual> population;
+int c, d, e, f;
+int fitnessFunction;
 
 mtrandom test;
 
@@ -32,29 +38,29 @@ int main()
 {
 	cout << "Evolutionary computing!" << endl;
 
-	int c, d, e, f;
-//	int populationSize;
-//	int numberOfGenes = 10;
-	int fitnessFunction;
+
 	readFile(populationSize, fitnessFunction, c, d, e, f);
 
 	//vector<Individual> population;// { -2.0 , -1.0 , 0.0 , 1.0 , 2.0 };
-	vector<double> population;
+	//vector<double> population;
 	initialisePop(population);
 
+	for(int i=0; i<populationSize; i++)
+	{
+		cout << "Individual number: " << i << " : ";
+		for(int j=0; j<1; j++)
+		{
+			cout << population[i].solution[j] << endl;
+		}
+//		cout << population[i].solution[0] << endl;
+	}
+
 	//TODO: Select individuals for mating
-	cout << "fitness: " << fitnessCheck(fitnessFunction, population) << endl;
+//	cout << "fitness: " << fitnessCheck(fitnessFunction, population) << endl;
 
 	//TODO: Mutate offspring
 
 	//TODO: Select offsprings to survive
-
-	for(int i=0; i<populationSize; i++)
-	{
-		cout << "Individual number " << i << " ";
-		cout << population[i];
-		cout << endl;
-	}
 
 //	double f1pop = f1(population);
 
@@ -76,14 +82,23 @@ void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e,
     getchar();
 }
 
-void initialisePop(vector<double>& population)
+//void initialisePop(vector<double>& population)
+void initialisePop(vector<Individual>& population)
 {
 	for(int i=0; i<populationSize; i++)	// initialize population
 	{
+		Individual individual;
+		population.push_back(individual);
+
 		//double tmp = fRand(0.0 , 10.0);
 //		double tmp = fRand();
-		double tmp = test.random();
-		population.push_back(tmp);
+//		double tmp = test.random();
+//		population[i].solution[0].push_back(tmp);
+	}
+
+	for(int i=0; i<populationSize; i++)
+	{
+		population[i].solution.push_back(test.random());
 	}
 }
 
