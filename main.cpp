@@ -36,6 +36,8 @@ int fitnessFunction;
 
 mtrandom test;
 
+pair<double,double> range;
+
 int main()
 {
 	cout << "Evolutionary computing!" << endl;
@@ -45,7 +47,6 @@ int main()
 	readFile(populationSize, fitnessFunction, c, d, e, f);
 	initialisePop(population);
 	crossover();
-//	Individual test = tournamentSelection();
 
 	for(int i=0; i<populationSize; i++)
 	{
@@ -75,7 +76,17 @@ void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e,
 {
 	std::fstream myfile("data", std::ios_base::in);
 
-    if(myfile >> populationSize >> fitnessFunction >> c >> d >> e >> f){}
+    if(myfile >> populationSize >> fitnessFunction >> c >> d >> e >> f)
+    {
+		switch(fitnessFunction)
+		{
+			case 1:
+				range = make_pair(-5.12 , 5.11);
+				break;
+			default:
+				break;
+		}
+    }
     else cout << "Couldn't read from file" << endl;
 
 	cout << "Population size: " << populationSize << endl;
@@ -93,6 +104,7 @@ void initialisePop(vector<Individual>& population)
 		individual.solution.push_back(rndtmp);
 		individual.fitness = f1(individual.solution);
 		individual.number = i;
+		individual.bGenes = to_binary(rndtmp, range, 10, false);
 		population.push_back(individual);
 	}
 }
@@ -116,8 +128,52 @@ void crossover()
 	while(parent1.number == parent2.number)
 		parent2 = tournamentSelection();
 
+	cout << "pair first " << range.first << endl;
+	cout << "pair second " << range.second << endl;
+
 	cout << "Parent 1 : " << parent1.number << endl;
 	cout << "Parent 2 : " << parent2.number << endl;
+
+	cout << "parent 1 binary: " << endl;
+	for(int i=0; i<parent1.bGenes.size(); i++)
+	{
+		cout << parent1.bGenes[i] << " ";
+	}
+
+	cout << "\nparent 2 binary: " << endl;
+	for(int i=0; i<parent2.bGenes.size(); i++)
+	{
+		cout << parent2.bGenes[i] << " ";
+	}
+
+	cout << endl;
+
+	Individual child1, child2;
+	//child1.bGenes.reserve(10);
+	for(int i=0; i<parent1.bGenes.size()/2; i++)
+	{
+		child1.bGenes.push_back(parent1.bGenes[i]);
+		child2.bGenes.push_back(parent2.bGenes[i]);
+	}
+	for(int i=parent2.bGenes.size()/2; i<10; i++)
+	{
+		child1.bGenes.push_back(parent2.bGenes[i]);
+		child2.bGenes.push_back(parent1.bGenes[i]);
+	}
+
+	cout << "Child 1 binary: " << endl;
+	for(int i=0; i<child1.bGenes.size(); i++)
+	{
+		cout << child1.bGenes[i] << " ";
+	}
+	cout << endl;
+
+	cout << "Child 2 binary: " << endl;
+	for(int i=0; i<child2.bGenes.size(); i++)
+	{
+		cout << child2.bGenes[i] << " ";
+	}
+	cout << endl;
 }
 
 Individual tournamentSelection()
