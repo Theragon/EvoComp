@@ -9,7 +9,7 @@
 using namespace std;
 
 void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e, int& f);
-
+void initialisePop(vector<double>& population);
 double fitnessCheck(int options, vector<double> population2);
 double f1(const vector<double>& xs);
 double f2(const vector<double>& xs);
@@ -17,9 +17,11 @@ vector<int> to_binary(double x, const pair<double,double>& prange, unsigned int 
 
 const int _f1_ = 1;
 const int _f2_ = 2;
+int populationSize;
 
 struct Individual
 {
+	double fitness;
 	double dGenes;
 	vector<int> bGenes;
 };
@@ -30,23 +32,15 @@ int main()
 {
 	cout << "Evolutionary computing!" << endl;
 
-	srand (time(NULL));
 	int c, d, e, f;
-	int populationSize;
+//	int populationSize;
 //	int numberOfGenes = 10;
 	int fitnessFunction;
 	readFile(populationSize, fitnessFunction, c, d, e, f);
 
 	//vector<Individual> population;// { -2.0 , -1.0 , 0.0 , 1.0 , 2.0 };
 	vector<double> population;
-
-	for(int i=0; i<populationSize; i++)	// initialize population
-	{
-		//double tmp = fRand(0.0 , 10.0);
-//		double tmp = fRand();
-		double tmp = test.random();
-		population.push_back(tmp);
-	}
+	initialisePop(population);
 
 	//TODO: Select individuals for mating
 	cout << "fitness: " << fitnessCheck(fitnessFunction, population) << endl;
@@ -80,6 +74,17 @@ void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e,
     cout << populationSize << "\t" << fitnessFunction << "\t" << c << "\t" << d << "\t" << e << "\t" << f << endl;
 
     getchar();
+}
+
+void initialisePop(vector<double>& population)
+{
+	for(int i=0; i<populationSize; i++)	// initialize population
+	{
+		//double tmp = fRand(0.0 , 10.0);
+//		double tmp = fRand();
+		double tmp = test.random();
+		population.push_back(tmp);
+	}
 }
 
 double fitnessCheck(int fitness, vector<double> population2)
