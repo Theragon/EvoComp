@@ -25,6 +25,7 @@ Individual tournamentSelection();
 double f1(const vector<double>& xs);
 double f2(const vector<double>& xs);
 vector<int> to_binary(double x, const pair<double,double>& prange, unsigned int num_bits, bool is_gray_coded);
+double from_binary(const std::vector<int>& bits, const std::pair<double,double>& prange, bool is_gray_coded);
 
 const int _f1_ = 1;
 const int _f2_ = 2;
@@ -161,6 +162,27 @@ void crossover()
 		child2.bGenes.push_back(parent1.bGenes[i]);
 	}
 
+//	double solutionTemp = from_binary(child1.bGenes, range, false);
+	child1.solution.push_back(from_binary(child1.bGenes, range, false));
+	child2.solution.push_back(from_binary(child2.bGenes, range, false));
+
+	cout << endl;
+	cout << "child 1 solution: " << endl;
+	for(int i=0; i<child1.solution.size(); i++)
+	{
+		cout << child1.solution[i];
+	}
+
+	cout << endl;
+
+	cout << "child 2 solution: " << endl;
+	for(int i=0; i<child1.solution.size(); i++)
+	{
+		cout << child1.solution[i];
+	}
+
+	cout << endl;
+
 	cout << "Child 1 binary: " << endl;
 	for(int i=0; i<child1.bGenes.size(); i++)
 	{
@@ -260,4 +282,35 @@ vector<int> to_binary(double x, const pair<double,double>& prange, unsigned int 
 	}
 
 	return result;
+}
+
+double from_binary(const std::vector<int>& bits, const std::pair<double,double>& prange, bool is_gray_coded)
+{
+	unsigned int num_bits = bits.size();
+	unsigned int intval = 0;
+
+	if(is_gray_coded)
+	{
+	// convert from gray to binary
+		std::vector<int> binary(num_bits);
+		binary[num_bits-1] = bits[num_bits-1];
+		intval = binary[num_bits-1];
+
+		for(int i=num_bits-2; i>=0; i--)
+		{
+			binary[i] = !(binary[i+1] == bits[i]);
+			intval += intval + binary[i];
+		}
+	}
+	else
+	{
+		// convert from binary encoding to integer
+		for(int i=num_bits-1; i>=0; i--)
+			intval += intval + bits[i];
+}
+	// convert from integer to double in the appropriate range
+	double range = prange.second - prange.first;
+	double m = range / (pow(2.0, double(num_bits)) - 1.0);
+
+	return m * double(intval) + prange.first;
 }
