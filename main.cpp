@@ -10,6 +10,7 @@ using namespace std;
 
 struct Individual
 {
+	int number;
 	double fitness;
 	double dGenes;
 	vector<int> bGenes;
@@ -19,6 +20,8 @@ struct Individual
 void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e, int& f);
 void initialisePop(vector<Individual>& population);
 double fitnessCheck(int options, vector<double> population2);
+void crossover();
+Individual tournamentSelection();
 double f1(const vector<double>& xs);
 double f2(const vector<double>& xs);
 vector<int> to_binary(double x, const pair<double,double>& prange, unsigned int num_bits, bool is_gray_coded);
@@ -37,14 +40,17 @@ int main()
 {
 	cout << "Evolutionary computing!" << endl;
 
+	test.seed_random(time(NULL));
 
 	readFile(populationSize, fitnessFunction, c, d, e, f);
 	initialisePop(population);
+	crossover();
+//	Individual test = tournamentSelection();
 
 	for(int i=0; i<populationSize; i++)
 	{
-		cout << "Individual number: " << i << " : ";
-		cout << " fitness = " << population[i].fitness << " ";
+		cout << "Individual number: " << population[i].number << " -> ";
+		cout << "fitness = " << population[i].fitness << " ";
 		for(int j=0; j<1; j++)
 		{
 			cout << "solution : " << population[i].solution[j] << endl;
@@ -86,6 +92,7 @@ void initialisePop(vector<Individual>& population)
 		Individual individual;
 		individual.solution.push_back(rndtmp);
 		individual.fitness = f1(individual.solution);
+		individual.number = i;
 		population.push_back(individual);
 	}
 }
@@ -99,6 +106,47 @@ double fitnessCheck(int fitness, vector<double> population2)
 			break;
 		default:
 			return f1(population2);
+	}
+}
+
+void crossover()
+{
+	Individual parent1 = tournamentSelection();
+	Individual parent2 = tournamentSelection();
+	while(parent1.number == parent2.number)
+		parent2 = tournamentSelection();
+
+	cout << "Parent 1 : " << parent1.number << endl;
+	cout << "Parent 2 : " << parent2.number << endl;
+}
+
+Individual tournamentSelection()
+{
+	int rand1 = test.random(populationSize);
+	int rand2 = test.random(populationSize);
+
+	while(rand1 == rand2)
+		rand2 = test.random(populationSize);
+
+	cout << "rand1 : " << rand1 << endl;
+	cout << "rand2 : " << rand2 << endl;
+
+	Individual candidate1 = population[rand1];
+	Individual candidate2 = population[rand2];
+
+	cout << "candidate 1 fitness : " << candidate1.fitness << endl;
+	cout << "candidate 2 fitness : " << candidate2.fitness << endl;
+
+	if(candidate1.fitness < candidate2.fitness)
+	{
+		cout << "return candidate 1" << endl;
+		return candidate1;
+	}
+
+	else
+	{
+		cout << "return candidate 2" << endl;
+		return candidate2;
 	}
 }
 
