@@ -104,7 +104,7 @@ void readFile(int& populationSize, int& fitnessFunction)
 	cout << "Population size: " << populationSize << endl;
 //	cout << populationSize << "\t" << fitnessFunction << "\t" << c << "\t" << d << "\t" << e << "\t" << f << endl;
 
-    getchar();
+//    getchar();
 }
 
 void initialize(vector<Individual>& population)
