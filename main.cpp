@@ -3,6 +3,7 @@
 #include <time.h>
 #include <fstream>
 #include <math.h>
+#include <iomanip>
 #include "mtrandom.h"
 
 using namespace std;
@@ -50,7 +51,7 @@ int main()
 	rnd.seed_random(time(NULL));
 	readFile(populationSize, fitnessFunction);
 	initialize(population);
-	display();
+	//display();
 
 	while(!done)
 	{
@@ -58,10 +59,14 @@ int main()
 		mutate(children);
 		//TODO: Select offsprings to survive
 		replacement(children);
-		cout << "Best solution: " << evaluate() << "\r";
-		if(evaluate() == 0.0000)
+//		cout << setprecision(10) << "Best solution: " << evaluate() << "\r";
+		cout << std::fixed;
+		cout << setprecision(10) << "Best solution: " << evaluate() << "\r";
+		//cout << setprecision(9) << f << '\n';
+		if(evaluate() == 0)
 			break;
 	}
+	cout << endl;
 
     return 0;
 }
