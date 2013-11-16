@@ -3,7 +3,6 @@
 #include <time.h>
 #include <fstream>
 #include <math.h>
-#include <cstdlib>
 #include "mtrandom.h"
 
 using namespace std;
@@ -12,47 +11,51 @@ struct Individual
 {
 	int number;
 	double fitness;
-	double dGenes;
-	vector<int> bGenes;
+	vector<int> chromosome;
 	vector<double> solution;
 };
 
-void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e, int& f);
-void initialisePop(vector<Individual>& population);
-double fitnessCheck(int options, vector<double> population2);
-pair<Individual, Individual> crossover();
+void readFile(int& populationSize, int& fitnessFunction);
+void initialize(vector<Individual>& population);
+pair<Individual,Individual> crossover();
 Individual tournamentSelection();
+void mutate(pair<Individual, Individual>& children);
 double f1(const vector<double>& xs);
 double f2(const vector<double>& xs);
 vector<int> to_binary(double x, const pair<double,double>& prange, unsigned int num_bits, bool is_gray_coded);
 double from_binary(const vector<int>& bits, const pair<double,double>& prange, bool is_gray_coded);
 
-const int _f1_ = 1;
-const int _f2_ = 2;
 int populationSize;
-
 vector<Individual> population;
-int c, d, e, f;
 int fitnessFunction;
+int chromosomeSize = 10;
 
 mtrandom rnd;
 
 pair<double,double> range;
-pair<Individual, Individual> children;
+pair<Individual,Individual> children;
+
+bool done = false;
 
 int main()
 {
 	cout << "Evolutionary computing!" << endl;
 
 	rnd.seed_random(time(NULL));
+	readFile(populationSize, fitnessFunction);
 
-	readFile(populationSize, fitnessFunction, c, d, e, f);
-	initialisePop(population);
-	children = crossover();
+	while(!done)
+	{
+		initialize(population);
+		children = crossover();
+		mutate(children);
+		//TODO: Select offsprings to survive
+		done = true;
+	}
 
 	for(int i=0; i<populationSize; i++)
 	{
-		cout << "Individual number: " << population[i].number << " -> ";
+		cout << "Individual #" << population[i].number << " -> ";
 		cout << "fitness = " << population[i].fitness << " ";
 		for(unsigned int j=0; j<population[i].solution.size(); j++)
 		{
@@ -60,25 +63,14 @@ int main()
 		}
 	}
 
-	//TODO: Select individuals for mating
-//	cout << "fitness: " << fitnessCheck(fitnessFunction, population) << endl;
-
-	//TODO: Mutate offspring
-
-	//TODO: Select offsprings to survive
-
-//	double f1pop = f1(population);
-
-//	cout << "f1: " << f1pop << endl;
-
     return 0;
 }
 
-void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e, int& f)
+void readFile(int& populationSize, int& fitnessFunction)
 {
-	std::fstream myfile("data", std::ios_base::in);
+	fstream myfile("data", ios_base::in);
 
-    if(myfile >> populationSize >> fitnessFunction >> c >> d >> e >> f)
+    if(myfile >> populationSize >> fitnessFunction)
     {
 		switch(fitnessFunction)
 		{
@@ -91,35 +83,23 @@ void readFile(int& populationSize, int& fitnessFunction, int& c, int& d, int& e,
     }
     else cout << "Couldn't read from file" << endl;
 
-	cout << "Population size: " << populationSize << endl;
-    cout << populationSize << "\t" << fitnessFunction << "\t" << c << "\t" << d << "\t" << e << "\t" << f << endl;
+//	cout << "Population size: " << populationSize << endl;
+//	cout << populationSize << "\t" << fitnessFunction << "\t" << c << "\t" << d << "\t" << e << "\t" << f << endl;
 
     getchar();
 }
 
-void initialisePop(vector<Individual>& population)
+void initialize(vector<Individual>& population)
 {
 	for(int i=0; i<populationSize; i++)	// initialize population
 	{
-		double rndtmp = rnd.random();
+		double rndtmp = rnd.random(range.first, range.second);
 		Individual individual;
 		individual.solution.push_back(rndtmp);
 		individual.fitness = f1(individual.solution);
 		individual.number = i;
-		individual.bGenes = to_binary(rndtmp, range, 10, false);
+		individual.chromosome = to_binary(rndtmp, range, chromosomeSize, false);
 		population.push_back(individual);
-	}
-}
-
-double fitnessCheck(int fitness, vector<double> population2)
-{
-	switch(fitness)
-	{
-		case _f1_:
-			return f1(population2);
-			break;
-		default:
-			return f1(population2);
 	}
 }
 
@@ -130,7 +110,7 @@ pair<Individual, Individual> crossover()
 	Individual parent2 = tournamentSelection();
 	while(parent1.number == parent2.number)
 		parent2 = tournamentSelection();
-
+/*
 	cout << "pair first " << range.first << endl;
 	cout << "pair second " << range.second << endl;
 
@@ -138,58 +118,42 @@ pair<Individual, Individual> crossover()
 	cout << "Parent 2 : " << parent2.number << endl;
 
 	cout << "parent 1 binary: " << endl;
-	for(unsigned int i=0; i<parent1.bGenes.size(); i++)
+	for(int i=0; i<chromosomeSize; i++)
 	{
-		cout << parent1.bGenes[i] << " ";
+		cout << parent1.chromosome[i] << " ";
 	}
 
 	cout << "\nparent 2 binary: " << endl;
-	for(unsigned int i=0; i<parent2.bGenes.size(); i++)
+	for(int i=0; i<chromosomeSize; i++)
 	{
-		cout << parent2.bGenes[i] << " ";
+		cout << parent2.chromosome[i] << " ";
 	}
 
 	cout << endl;
-
+*/
 	Individual child1, child2;
-	for(unsigned int i=0; i<parent1.bGenes.size()/2; i++)
+	for(int i=0; i<chromosomeSize/2; i++)
 	{
-		child1.bGenes.push_back(parent1.bGenes[i]);
-		child2.bGenes.push_back(parent2.bGenes[i]);
+		child1.chromosome.push_back(parent1.chromosome[i]);
+		child2.chromosome.push_back(parent2.chromosome[i]);
 	}
-	for(unsigned int i=parent2.bGenes.size()/2; i<10; i++)
+	for(int i=chromosomeSize/2; i<10; i++)
 	{
-		child1.bGenes.push_back(parent2.bGenes[i]);
-		child2.bGenes.push_back(parent1.bGenes[i]);
+		child1.chromosome.push_back(parent2.chromosome[i]);
+		child2.chromosome.push_back(parent1.chromosome[i]);
 	}
-
-	child1.solution.push_back(from_binary(child1.bGenes, range, false));
-	child2.solution.push_back(from_binary(child2.bGenes, range, false));
-
-	cout << endl;
-	cout << "child 1 solution: " << endl;
-	for(unsigned int i=0; i<child1.solution.size(); i++)
-		cout << child1.solution[i];
-
-	cout << endl;
-
-	cout << "child 2 solution: " << endl;
-	for(unsigned int i=0; i<child2.solution.size(); i++)
-		cout << child2.solution[i];
-
-	cout << endl;
 
 	cout << "Child 1 binary: " << endl;
-	for(unsigned int i=0; i<child1.bGenes.size(); i++)
+	for(int i=0; i<chromosomeSize; i++)
 	{
-		cout << child1.bGenes[i] << " ";
+		cout << child1.chromosome[i] << " ";
 	}
 	cout << endl;
 
 	cout << "Child 2 binary: " << endl;
-	for(unsigned int i=0; i<child2.bGenes.size(); i++)
+	for(int i=0; i<chromosomeSize; i++)
 	{
-		cout << child2.bGenes[i] << " ";
+		cout << child2.chromosome[i] << " ";
 	}
 	cout << endl;
 
@@ -206,18 +170,39 @@ Individual tournamentSelection()
 	while(rand1 == rand2)
 		rand2 = rnd.random(populationSize);
 
-	cout << "rand1 : " << rand1 << endl;
-	cout << "rand2 : " << rand2 << endl;
-
 	Individual candidate1 = population[rand1];
 	Individual candidate2 = population[rand2];
-
-	cout << "candidate 1 fitness : " << candidate1.fitness << endl;
-	cout << "candidate 2 fitness : " << candidate2.fitness << endl;
 
 	if(candidate1.fitness < candidate2.fitness) return candidate1;
 
 	else return candidate2;
+}
+
+void mutate(pair<Individual, Individual>& children)
+{
+	int flipBit = rnd.random(chromosomeSize);			// select random "gene" to mutate
+	cout << "bit to flip: " << flipBit << endl;
+
+	if(children.first.chromosome[flipBit] == 0) children.first.chromosome[flipBit] = 1;		// mutate first child
+	else children.first.chromosome[flipBit] = 0;
+
+	flipBit = rnd.random(chromosomeSize);				// select new random "gene" to mutate for child 2
+
+	if(children.second.chromosome[flipBit] == 0) children.second.chromosome[flipBit] = 1;		// mutate second child
+	else children.second.chromosome[flipBit] = 0;
+
+	children.first.solution.push_back(from_binary(children.first.chromosome, range, false));
+	children.second.solution.push_back(from_binary(children.second.chromosome, range, false));
+
+	cout << "child 1 solution: " << endl;
+	for(unsigned int i=0; i<children.first.solution.size(); i++)
+		cout << children.first.solution[i];
+	cout << endl;
+
+	cout << "child 2 solution: " << endl;
+	for(unsigned int i=0; i<children.second.solution.size(); i++)
+		cout << children.second.solution[i];
+	cout << endl;
 }
 
 // Dejong’s F1 (sphere) function N 2
