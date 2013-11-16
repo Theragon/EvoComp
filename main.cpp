@@ -12,12 +12,15 @@ struct Individual
 {
 	int number;
 	double fitness;
-	vector<int> chromosome;
+	vector<int> chromosomes[2];
+	vector<int> chromosome1;
+	vector<int> chromosome2;
 	vector<double> solution;
 };
 
 void display();
 void readFile(int& populationSize, int& fitnessFunction);
+void readFile(string file);
 void initialize(vector<Individual>& population);
 pair<Individual,Individual> crossover();
 Individual tournamentSelection();
@@ -25,6 +28,7 @@ void mutate(pair<Individual,Individual>& children);
 void replacement(pair<Individual,Individual> children);
 Individual weakestLink();
 double evaluate();
+double fitnessCheck(vector<double> solution);
 double f1(const vector<double>& xs);
 double f2(const vector<double>& xs);
 vector<int> to_binary(double x, const pair<double,double>& prange, unsigned int num_bits, bool is_gray_coded);
@@ -43,30 +47,39 @@ pair<Individual,Individual> children;
 bool done = false;
 int bestI;
 int weakestI;
+string file;
+int N;
 
-int main()
+int main(int argc, char *argv[])
 {
-	cout << "Evolutionary computing!" << endl;
-
 	rnd.seed_random(time(NULL));
-	readFile(populationSize, fitnessFunction);
+	cout << "Evolutionary computing!" << endl;
+	if(argc != 2)
+	{
+		cout << "usage" << endl;
+		exit(1);
+	}
+	else
+	{
+		file = argv[1];
+		readFile(file);
+	}
+
 	initialize(population);
-	//display();
 
 	while(!done)
 	{
 		children = crossover();
 		mutate(children);
-		//TODO: Select offsprings to survive
 		replacement(children);
-//		cout << setprecision(10) << "Best solution: " << evaluate() << "\r";
 		cout << std::fixed;
-		cout << setprecision(10) << "Best solution: " << evaluate() << "\r";
-		//cout << setprecision(9) << f << '\n';
-		if(evaluate() == 0)
+//		cout << setprecision(10) << "Best solution: " << evaluate() << "\r";
+		cout << setprecision(10) << "Best solution: " << evaluate() << endl;
+		if(evaluate() == 0.000000000)
 			break;
 	}
 	cout << endl;
+//	display();
 
     return 0;
 }
@@ -84,17 +97,26 @@ void display()
 	}
 }
 
-void readFile(int& populationSize, int& fitnessFunction)
+//void readFile(int& populationSize, int& fitnessFunction)
+void readFile(string file)
 {
-	fstream myfile("data", ios_base::in);
+//	fstream myfile("data", ios_base::in);
+	fstream myfile(file, ios_base::in);
 
     if(myfile >> populationSize >> fitnessFunction)
     {
-		switch(fitnessFunction)
+		switch(fitnessFunction)						// problem to solve
 		{
-			case 1:
+			case 1:									// problem 1
 				range = make_pair(-5.12 , 5.11);
+				N = 1;
 				break;
+			case 2:									// problem 2
+				range = make_pair(-2.048, 2.047);
+				N = 2;
+				break;
+			case 3:
+				N = 10;
 			default:
 				break;
 		}
@@ -114,25 +136,34 @@ void initialize(vector<Individual>& population)
 
 	for(int i=0; i<populationSize; i++)	// initialize population
 	{
-		double tmprnd = rnd.random(range.first, range.second);
-
 		Individual individual;
-		individual.solution.push_back(tmprnd);
-		individual.fitness = f1(individual.solution);
+		individual.number = i;
 
-		if(i == 0)
+		for(int j=0; j<N; j++)
+		{
+			vector<int> chromosome;
+			double tmprnd = rnd.random(range.first, range.second);
+			individual.chromosomes[j] = chromosome;
+			individual.chromosomes[j] = to_binary(tmprnd, range, chromosomeSize, false);
+//			individual.chromosome1 = to_binary(tmprnd, range, chromosomeSize, false);
+			individual.solution.push_back(tmprnd);
+		}
+
+		individual.fitness = fitnessCheck(individual.solution);
+
+		if(i == 0)								// if it's the first individual
 		{
 			weakestI = i;
-//			weakest = individual.fitness;
-			weakest = best = individual.fitness;
+			weakest = individual.fitness;
+//			weakest = best = individual.fitness;
 			bestI = i;
 		}
 
-		else if(individual.fitness > weakest)
+		/*else if(individual.fitness > weakest)
 		{
 			weakest = individual.fitness;
 			weakestI = i;
-		}
+		}*/
 
 		else if(individual.fitness < best)
 		{
@@ -140,8 +171,7 @@ void initialize(vector<Individual>& population)
 			bestI = i;
 		}
 
-		individual.number = i;
-		individual.chromosome = to_binary(tmprnd, range, chromosomeSize, false);
+//		individual.chromosome = to_binary(tmprnd, range, chromosomeSize, false);
 		population.push_back(individual);
 /*
 		cout << "Best fitness : \t\t" << best << endl;
@@ -161,16 +191,24 @@ pair<Individual,Individual> crossover()
 		parent2 = tournamentSelection();
 
 	Individual child1, child2;
-	for(int i=0; i<chromosomeSize/2; i++)
-	{
-		child1.chromosome.push_back(parent1.chromosome[i]);
-		child2.chromosome.push_back(parent2.chromosome[i]);
-	}
-	for(int i=chromosomeSize/2; i<10; i++)
-	{
-		child1.chromosome.push_back(parent2.chromosome[i]);
-		child2.chromosome.push_back(parent1.chromosome[i]);
-	}
+
+	for(int i=0; i<N; i++)
+		for(int j=0; j<chromosomeSize/2; j++)
+		{
+			child1.chromosomes[i].push_back(parent1.chromosomes[i][j]);
+			child2.chromosomes[i].push_back(parent2.chromosomes[i][j]);
+//			child1.chromosome1.push_back(parent1.chromosome1[i]);
+//			child2.chromosome1.push_back(parent2.chromosome1[i]);
+		}
+
+	for(int i=0; i<N; i++)
+		for(int j=chromosomeSize/2; j<chromosomeSize; j++)
+		{
+			child1.chromosomes[i].push_back(parent2.chromosomes[i][j]);
+			child2.chromosomes[i].push_back(parent1.chromosomes[i][j]);
+//			child1.chromosome1.push_back(parent2.chromosome1[i]);
+//			child2.chromosome1.push_back(parent1.chromosome1[i]);
+		}
 /*
 	cout << "Child 1 binary: " << endl;
 	for(int i=0; i<chromosomeSize; i++)
@@ -196,8 +234,7 @@ Individual tournamentSelection()
 	int rand1 = rnd.random(populationSize);
 	int rand2 = rnd.random(populationSize);
 
-	while(rand1 == rand2)
-		rand2 = rnd.random(populationSize);
+	while(rand1 == rand2) rand2 = rnd.random(populationSize);
 
 	Individual candidate1 = population[rand1];
 	Individual candidate2 = population[rand2];
@@ -212,19 +249,43 @@ void mutate(pair<Individual,Individual>& children)
 	int flipBit = rnd.random(chromosomeSize);			// select random "gene" to mutate
 //	cout << "bit to flip: " << flipBit << endl;
 
-	if(children.first.chromosome[flipBit] == 0) children.first.chromosome[flipBit] = 1;		// mutate first child
-	else children.first.chromosome[flipBit] = 0;
+	for(int i=0; i<N; i++)
+	{
+		if(children.first.chromosomes[i][flipBit] == 0)
+			children.first.chromosomes[i][flipBit] = 1;
+		else children.first.chromosomes[i][flipBit] = 0;
+/*
+		if(children.first.chromosome1[flipBit] == 0)
+			children.first.chromosome1[flipBit] = 1;		// mutate first child
+		else children.first.chromosome1[flipBit] = 0;
+*/
+	}
 
 	flipBit = rnd.random(chromosomeSize);				// select new random "gene" to mutate for child 2
 
-	if(children.second.chromosome[flipBit] == 0) children.second.chromosome[flipBit] = 1;		// mutate second child
-	else children.second.chromosome[flipBit] = 0;
+	for(int i=0; i<N; i++)
+	{
+		if(children.second.chromosomes[i][flipBit] == 0)
+			children.second.chromosomes[i][flipBit] = 1;
+		else children.second.chromosomes[i][flipBit] = 0;
+/*
+		if(children.second.chromosome1[flipBit] == 0)
+			children.second.chromosome1[flipBit] = 1;		// mutate second child
+		else children.second.chromosome1[flipBit] = 0;
+*/
+	}
 
-	children.first.solution.push_back(from_binary(children.first.chromosome, range, false));
-	children.second.solution.push_back(from_binary(children.second.chromosome, range, false));
+	for(int i=0; i<N; i++)
+	{
+		children.first.solution.push_back(from_binary(children.first.chromosomes[i], range, false));
+		children.second.solution.push_back(from_binary(children.second.chromosomes[i], range, false));
+	}
 
-	children.first.fitness = f1(children.first.solution);
-	children.second.fitness = f1(children.second.solution);
+//	children.first.solution.push_back(from_binary(children.first.chromosome1, range, false));
+//	children.second.solution.push_back(from_binary(children.second.chromosome1, range, false));
+
+	children.first.fitness = fitnessCheck(children.first.solution);
+	children.second.fitness = fitnessCheck(children.second.solution);
 /*
 	cout << "child 1 solution: " << endl;
 	for(unsigned int i=0; i<children.first.solution.size(); i++)
@@ -339,6 +400,22 @@ double evaluate()
 	}
 
 	return best;
+}
+
+double fitnessCheck(vector<double> solution)
+{
+	switch(fitnessFunction)
+	{
+		case 1:
+			return f1(solution);
+			break;
+		case 2:
+			return f2(solution);
+			break;
+		default:
+			return 0.0;
+			break;
+	}
 }
 
 // Dejong’s F1 (sphere) function N 2
