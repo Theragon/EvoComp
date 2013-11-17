@@ -27,6 +27,7 @@ Individual tournamentSelection();
 void mutate(pair<Individual,Individual>& children);
 void replacement(pair<Individual,Individual> children);
 Individual weakestLink();
+Individual fittest();
 double evaluate();
 double fitnessCheck(vector<double> solution);
 double f1(const vector<double>& xs);
@@ -49,6 +50,7 @@ int bestI;
 int weakestI;
 string file;
 int N;
+bool gray;
 
 int main(int argc, char *argv[])
 {
@@ -66,6 +68,7 @@ int main(int argc, char *argv[])
 	}
 
 	initialize(population);
+//	display();
 
 	while(!done)
 	{
@@ -73,13 +76,16 @@ int main(int argc, char *argv[])
 		mutate(children);
 		replacement(children);
 		cout << std::fixed;
-//		cout << setprecision(10) << "Best solution: " << evaluate() << "\r";
-		cout << setprecision(10) << "Best solution: " << evaluate() << endl;
+		cout << setprecision(10) << "Best solution: " << evaluate() << "\r";
+//		cout << setprecision(10) << "Best solution: " << evaluate() << endl;
 		if(evaluate() == 0.000000000)
-			break;
+			done = true;
+//		break;
 	}
 	cout << endl;
 //	display();
+
+//	cout << "Fittest: #" << fittest().number << " fitness: " << fittest().fitness << endl;
 
     return 0;
 }
@@ -103,7 +109,7 @@ void readFile(string file)
 //	fstream myfile("data", ios_base::in);
 	fstream myfile(file, ios_base::in);
 
-    if(myfile >> populationSize >> fitnessFunction)
+    if(myfile >> populationSize >> fitnessFunction >> gray)
     {
 		switch(fitnessFunction)						// problem to solve
 		{
@@ -123,7 +129,7 @@ void readFile(string file)
     }
     else cout << "Couldn't read from file" << endl;
 
-	cout << "Population size: " << populationSize << endl;
+	cout << "Population size: " << populationSize << " problem: " << fitnessFunction << " gray: " << gray << endl;
 //	cout << populationSize << "\t" << fitnessFunction << "\t" << c << "\t" << d << "\t" << e << "\t" << f << endl;
 
 //    getchar();
@@ -144,7 +150,7 @@ void initialize(vector<Individual>& population)
 			vector<int> chromosome;
 			double tmprnd = rnd.random(range.first, range.second);
 			individual.chromosomes[j] = chromosome;
-			individual.chromosomes[j] = to_binary(tmprnd, range, chromosomeSize, false);
+			individual.chromosomes[j] = to_binary(tmprnd, range, chromosomeSize, gray);
 //			individual.chromosome1 = to_binary(tmprnd, range, chromosomeSize, false);
 			individual.solution.push_back(tmprnd);
 		}
@@ -180,6 +186,21 @@ void initialize(vector<Individual>& population)
 		cout << "Weakest index : \t" << weakestI << endl;
 */
 	}
+}
+
+Individual tournamentSelection()
+{
+	int rand1 = rnd.random(populationSize);
+	int rand2 = rnd.random(populationSize);
+
+	while(rand1 == rand2) rand2 = rnd.random(populationSize);
+
+	Individual candidate1 = population[rand1];
+	Individual candidate2 = population[rand2];
+
+	if(candidate1.fitness < candidate2.fitness) return candidate1;
+
+	else return candidate2;
 }
 
 pair<Individual,Individual> crossover()
@@ -229,24 +250,10 @@ pair<Individual,Individual> crossover()
 	return children;
 }
 
-Individual tournamentSelection()
-{
-	int rand1 = rnd.random(populationSize);
-	int rand2 = rnd.random(populationSize);
-
-	while(rand1 == rand2) rand2 = rnd.random(populationSize);
-
-	Individual candidate1 = population[rand1];
-	Individual candidate2 = population[rand2];
-
-	if(candidate1.fitness < candidate2.fitness) return candidate1;
-
-	else return candidate2;
-}
-
 void mutate(pair<Individual,Individual>& children)
 {
-	int flipBit = rnd.random(chromosomeSize);			// select random "gene" to mutate
+
+	int flipBit = rnd.random(chromosomeSize);			// select random "gene" to mutate for child 1
 //	cout << "bit to flip: " << flipBit << endl;
 
 	for(int i=0; i<N; i++)
@@ -277,8 +284,8 @@ void mutate(pair<Individual,Individual>& children)
 
 	for(int i=0; i<N; i++)
 	{
-		children.first.solution.push_back(from_binary(children.first.chromosomes[i], range, false));
-		children.second.solution.push_back(from_binary(children.second.chromosomes[i], range, false));
+		children.first.solution.push_back(from_binary(children.first.chromosomes[i], range, gray));
+		children.second.solution.push_back(from_binary(children.second.chromosomes[i], range, gray));
 	}
 
 //	children.first.solution.push_back(from_binary(children.first.chromosome1, range, false));
@@ -329,6 +336,28 @@ Individual weakestLink()
 	return population[weakestI];
 }
 
+Individual fittest()
+{
+	double best;
+
+	for (int i=0; i <populationSize; i++)
+	{
+		if(i == 0)
+		{
+			bestI = i;
+			best = population[i].fitness;
+		}
+
+		else if(population[i].fitness < best)
+		{
+			best = population[i].fitness;
+			bestI = i;
+		}
+	}
+
+	return population[bestI];
+}
+
 void replacement(pair<Individual,Individual> children)
 {
 	short child;
@@ -341,43 +370,47 @@ void replacement(pair<Individual,Individual> children)
 	cout << "Child 1 fitness : " << children.first.fitness << endl;
 	cout << "Child 2 fitness : " << children.second.fitness << endl;
 */
-	if(children.first.fitness < children.second.fitness)	// Which child has lower fitness
+	if(children.first.fitness < children.second.fitness)	// if child 1 has lower fitness
 	{
+//		cout << "Fitter child fitness: " << children.first.fitness << "\r";
+		//cout << endl;
 		child = 0;
-		if(weakest.fitness > children.first.fitness)
+		if(weakest.fitness > children.first.fitness)				// if child 1 fitness is lower than the weakest fitness
 		{
 //			cout << "Replace weakest with child 1" << endl;
 			children.first.number = population[weakestI].number;
-			population[weakestI] = children.first;
+			population[weakestI] = children.first;					// replace the weakest with child 1
 		}
 	}
 	else
 	{
+//		cout << "Fitter child fitness: " << children.second.fitness << "\r";
+//		cout << endl;
 		child = 1;
-		if(weakest.fitness > children.second.fitness)
+		if(weakest.fitness > children.second.fitness)				// if child 2 has lower fitness than the weakest fitness
 		{
 //			cout << "Replace weakest with child 2" << endl;
 			children.second.number = population[weakestI].number;
-			population[weakestI] = children.second;
+			population[weakestI] = children.second;					// replace the weakest with child 2
 		}
 	}
 
 	weakest = weakestLink();
 
-	if(child == 0)
+	if(child == 0)													// if we just replaced the weakest with child 1
 	{
-		if(children.second.fitness < weakest.fitness)
+		if(children.second.fitness < weakest.fitness)				// if child 2 has lower fitness than the weakest fitness
 		{
 			children.second.number = population[weakestI].number;
-			population[weakestI] = children.second;
+			population[weakestI] = children.second;					// replace the weakest with child 2
 		}
 	}
-	else
+	else															// if we just replaced the weakest with child 2
 	{
-		if(children.first.fitness < weakest.fitness)
+		if(children.first.fitness < weakest.fitness)				// if child 1 has lower fitness than the weakest fitness
 		{
 			children.first.number = population[weakestI].number;
-			population[weakestI] = children.first;
+			population[weakestI] = children.first;					// replace the weakest with child 1
 		}
 	}
 /*
