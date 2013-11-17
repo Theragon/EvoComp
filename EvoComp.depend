@@ -1,11 +1,12 @@
 # depslib dependency file v1.0
-1383855256 source:/home/logan/GitRepository/EvoComp/main.cpp
+1384704533 source:/home/logan/GitRepository/EvoComp/main.cpp
 	<iostream>
 	<vector>
 	<time.h>
 	<fstream>
 	<math.h>
-	<cstdlib>
+	<iomanip>
+	"mtrandom.h"
 
 1384521552 source:/home/logan/GitRepository/EvoComp/mtrandom.cpp
 	<vector>

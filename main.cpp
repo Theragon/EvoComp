@@ -24,8 +24,10 @@ void readFile(string file);
 void initialize(vector<Individual>& population);
 pair<Individual,Individual> crossover();
 Individual tournamentSelection();
+Individual tournamentSelection2();
 void mutate(pair<Individual,Individual>& children);
 void replacement(pair<Individual,Individual> children);
+void replacement2(pair<Individual,Individual> children);
 Individual weakestLink();
 Individual fittest();
 double evaluate();
@@ -51,6 +53,8 @@ int weakestI;
 string file;
 int N;
 bool gray;
+int replaceStrategy;
+int iterations = 0;
 
 int main(int argc, char *argv[])
 {
@@ -74,13 +78,16 @@ int main(int argc, char *argv[])
 	{
 		children = crossover();
 		mutate(children);
-		replacement(children);
+//		replacement(children);
+		replacement2(children);
 		cout << std::fixed;
-		cout << setprecision(10) << "Best solution: " << evaluate() << "\r";
+		cout << setprecision(10) << "Best solution: " << evaluate() << " Iteration: " << iterations << "\r";
+//		cout << "\n Iteration: " << iterations << "\r";
 //		cout << setprecision(10) << "Best solution: " << evaluate() << endl;
 		if(evaluate() == 0.000000000)
 			done = true;
 //		break;
+		iterations++;
 	}
 	cout << endl;
 //	display();
@@ -109,7 +116,7 @@ void readFile(string file)
 //	fstream myfile("data", ios_base::in);
 	fstream myfile(file, ios_base::in);
 
-    if(myfile >> populationSize >> fitnessFunction >> gray)
+    if(myfile >> populationSize >> fitnessFunction >> gray >> replaceStrategy)
     {
 		switch(fitnessFunction)						// problem to solve
 		{
@@ -127,9 +134,13 @@ void readFile(string file)
 				break;
 		}
     }
-    else cout << "Couldn't read from file" << endl;
+    else
+    {
+		cout << "Couldn't read from file" << endl;
+		exit(1);
+	}
 
-	cout << "Population size: " << populationSize << " problem: " << fitnessFunction << " gray: " << gray << endl;
+	cout << "Population size: " << populationSize << " problem: " << fitnessFunction << " gray: " << gray << " replacement strategy: " << replaceStrategy << endl;
 //	cout << populationSize << "\t" << fitnessFunction << "\t" << c << "\t" << d << "\t" << e << "\t" << f << endl;
 
 //    getchar();
@@ -199,6 +210,21 @@ Individual tournamentSelection()
 	Individual candidate2 = population[rand2];
 
 	if(candidate1.fitness < candidate2.fitness) return candidate1;
+
+	else return candidate2;
+}
+
+Individual tournamentSelection2()
+{
+	int rand1 = rnd.random(populationSize);
+	int rand2 = rnd.random(populationSize);
+
+	while(rand1 == rand2) rand2 = rnd.random(populationSize);
+
+	Individual candidate1 = population[rand1];
+	Individual candidate2 = population[rand2];
+
+	if(candidate1.fitness > candidate2.fitness) return candidate1;
 
 	else return candidate2;
 }
@@ -356,6 +382,51 @@ Individual fittest()
 	}
 
 	return population[bestI];
+}
+
+void replacement2(pair<Individual,Individual> children)
+{
+	short child;
+	Individual toReplace = tournamentSelection2();
+
+	if(children.first.fitness < children.second.fitness)
+	{
+		child = 0;
+		if(toReplace.fitness > children.first.fitness)
+		{
+			children.first.number = toReplace.number;
+			population[toReplace.number] = children.first;
+		}
+	}
+
+	else
+	{
+		child = 1;
+		if (toReplace.fitness > children.second.fitness)
+		{
+			children.second.number = toReplace.number;
+			population[toReplace.number] = children.second;
+		}
+	}
+
+	toReplace = tournamentSelection2();
+
+	if(child == 0)
+	{
+		if(children.second.fitness < toReplace.fitness)
+		{
+			children.second.number = toReplace.number;
+			population[toReplace.number] = children.second;
+		}
+	}
+	else															// if we just replaced the weakest with child 2
+	{
+		if(children.first.fitness < toReplace.fitness)				// if child 1 has lower fitness than the weakest fitness
+		{
+			children.first.number = toReplace.number;
+			population[toReplace.number] = children.first;					// replace the weakest with child 1
+		}
+	}
 }
 
 void replacement(pair<Individual,Individual> children)
