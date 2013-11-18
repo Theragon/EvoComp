@@ -350,7 +350,7 @@ pair<Individual,Individual> crowdSelection()
 
 	pair<Individual,Individual> parents;
 
-	cout << "mating pool size: " << matingPool.size() << endl;
+//	cout << "mating pool size: " << matingPool.size() << endl;
 
 	for(int i=0; i<10; i++)
 	{
@@ -361,7 +361,7 @@ pair<Individual,Individual> crowdSelection()
 	randParent1 = rnd.random(10);
 	parent1 = matingPool[randParent1];
 
-	cout << "parent 1 solution x: " << parent1.solution[0] << " y: " << parent1.solution[1] << endl;
+//	cout << "parent 1 solution x: " << parent1.solution[0] << " y: " << parent1.solution[1] << endl;
 
 	double distance, bestDistance;
 
@@ -370,11 +370,11 @@ pair<Individual,Individual> crowdSelection()
 		Individual parent2 = matingPool[i];
 		if(parent1.number == parent2.number)
 			continue;
-		cout << "parent 2 solution x: " << parent2.solution[0] << " y: " << parent2.solution[1] << endl;
+//		cout << "parent 2 solution x: " << parent2.solution[0] << " y: " << parent2.solution[1] << endl;
 
 		distance = sqrt( pow(parent1.solution[0] - parent2.solution[0], 2) + pow(parent1.solution[1] - parent2.solution[1], 2) );
 
-		cout << "Distance: " << distance << endl;
+//		cout << "Distance: " << distance << endl;
 
 		if(i == 0)
 		{
@@ -387,7 +387,7 @@ pair<Individual,Individual> crowdSelection()
 			closest = i;
 		}
 	}
-	cout << "Best distance: " << bestDistance << endl;
+//	cout << "Best distance: " << bestDistance << endl;
 
 	parents = make_pair(parent1, matingPool[closest]);
 	
