@@ -68,12 +68,15 @@ int weakestI;
 string file;
 
 bool gray;
-int replaceStrategy;
+char replacementStrategy;
 int iterations = 0;
 double mutationRate;
-int selectionStrategy;
+char selectionStrategy;
 int crossoverStrategy;
 int maxIterations;
+
+double currentBest;
+double lastBest;
 
 int main(int argc, char *argv[])
 {
@@ -92,7 +95,7 @@ int main(int argc, char *argv[])
 
 	initialize(population);
 
-	display();
+//	display();
 
 	do
 	{
@@ -102,16 +105,32 @@ int main(int argc, char *argv[])
 		if(useAge) updateAge(iterations);
 		replacement(children);
 		cout << std::fixed;
-		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " 1: " << iterations << "\r";
+		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " iteration#: " << iterations << "\r";
 //		cout << "\n Iteration: " << iterations << "\r";
 //		cout << setprecision(10) << "Best solution: " << evaluate() << endl;
+		currentBest = evaluate();
+		if(iterations == 0)
+			lastBest = currentBest;
+		if(iterations % 10000 == 0 && iterations > 0)
+		{
+			cout << "10000 iterations" << endl;
+			cout << "currentBest: " << currentBest << endl;
+			cout << "lastBest: " << lastBest << endl;
+			if(currentBest >= lastBest)
+				done = true;
+			else lastBest = currentBest;
+		}
+/*
 		if(evaluate() == 0.000000000)
 			done = true;
+*/
 		iterations++;
 	}while(!done && iterations < maxIterations);
 	cout << endl;
+	cout << "currentBest: " << currentBest << endl;
+	cout << "lastBest: " << lastBest << endl;
 
-	display();
+//	display();
 
     return 0;
 }
@@ -133,7 +152,7 @@ void readFile(string file)
 {
 	fstream myfile(file.c_str(), ios_base::in);
 
-    if(myfile >> populationSize >> fitnessFunction >> gray >> replaceStrategy >> mutationRate >> selectionStrategy >> crossoverStrategy >> maxIterations)
+    if(myfile >> populationSize >> fitnessFunction >> gray >> replacementStrategy >> mutationRate >> selectionStrategy >> crossoverStrategy >> maxIterations)
     {
 		switch(fitnessFunction)						// problem to solve
 		{
@@ -155,9 +174,9 @@ void readFile(string file)
 			default:
 				break;
 		}
-		switch(replaceStrategy)
+		switch(replacementStrategy)
 		{
-			case 4:
+			case 'O':
 				useAge = true;
 				break;
 			default:
@@ -173,13 +192,13 @@ void readFile(string file)
 	cout << "Population size: " << populationSize << endl;
 	cout << "problem: " << fitnessFunction << endl;
 	cout << "Gray coded: " << gray << endl;
-	cout << "Replacement strategy: " << replaceStrategy <<  endl;
+	cout << "Replacement strategy: " << replacementStrategy <<  endl;
 	cout << "Mutation rate: " << mutationRate << endl;
-	cout << "Parent selection strategy: " << selectionStrategy << endl;
+	cout << "Selection strategy: " << selectionStrategy << endl;
 	cout << "Crossover strategy: " << crossoverStrategy << endl;
 	cout << "Max iterations: " << maxIterations << endl;
 
-    getchar();
+//    getchar();
 }
 
 void initialize(vector<Individual>& population)
@@ -223,7 +242,6 @@ void initialize(vector<Individual>& population)
 			bestI = i;
 		}
 
-//		individual.chromosome = to_binary(tmprnd, range, chromosomeSize, false);
 		population.push_back(individual);
 	}
 }
@@ -235,7 +253,7 @@ pair<Individual, Individual> parentSelection()
 
 	switch(selectionStrategy)							// decide on what selection function to use
 	{
-		case 1:											// selectionStrategy 1 means parents are selected randomly
+		case 'R':											// selectionStrategy 1 means parents are selected randomly
 
 			parent1 = randomSelection();				// select parent 1 randomly
 			parent2 = randomSelection();				// select parent 2 randomly
@@ -246,7 +264,7 @@ pair<Individual, Individual> parentSelection()
 			parents = make_pair(parent1, parent2);		// make the pair
 			return parents;								// return parents pair
 
-		case 2:											// selectionStrategy 2 means parents are selected with tournament selection
+		case 'T':											// selectionStrategy 2 means parents are selected with tournament selection
 
 			parent1 = tournamentSelection();			// select parent 1 with tournament selection
 			parent2 = tournamentSelection();			// select parent 2 with tournament selection
@@ -257,7 +275,7 @@ pair<Individual, Individual> parentSelection()
 			parents = make_pair(parent1, parent2);		// make the pair
 			return parents;								// return parents pair
 
-		default:
+		default:										// default is tournament selection
 
 			parent1 = tournamentSelection();			// select parent 1 with tournament selection
 			parent2 = tournamentSelection();			// select parent 2 with tournament selection
@@ -466,6 +484,7 @@ Individual weakestLink()
 	return population[weakestI];
 }
 
+// Return the fittest individual
 Individual fittest()
 {
 	double best;
@@ -488,23 +507,24 @@ Individual fittest()
 	return population[bestI];
 }
 
+// Wrapper function to choose the right replacement strategy at runtime
 void replacement(pair<Individual,Individual> children)
 {
-	switch(replaceStrategy)
+	switch(replacementStrategy)
 	{
-		case 1:
+		case 'W':
 			replaceWeakest(children);
 			break;
 
-		case 2:
+		case 'T':
 			replaceWithTournament(children);
 			break;
 
-		case 3:
+		case 'R':
 			replaceRandom(children);
 			break;
 
-		case 4:
+		case 'O':
 			replaceOldest(children);
 			break;
 	}
