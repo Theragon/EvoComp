@@ -27,6 +27,7 @@ pair<Individual, Individual> parentSelection();
 Individual randomSelection();
 Individual tournamentSelection();
 Individual tournamentSelectionWeaker();
+pair<Individual,Individual> crowdSelection();
 pair<Individual,Individual> crossover(pair<Individual,Individual> parents);
 pair<Individual,Individual> fixedPointCrossover(pair<Individual,Individual> parents);
 pair<Individual,Individual> randomPointCrossover(pair<Individual,Individual> parents);
@@ -94,7 +95,12 @@ int main(int argc, char *argv[])
 	}
 
 	initialize(population);
-
+/*
+	for(int i=0; i<population[0].chromosomes.size(); i++)
+	{
+		cout << "Chromosome " << i << endl;
+	}
+*/
 //	display();
 
 	do
@@ -105,7 +111,7 @@ int main(int argc, char *argv[])
 		if(useAge) updateAge(iterations);
 		replacement(children);
 		cout << std::fixed;
-		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " iteration#: " << iterations << "\r";
+		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " z:" << population[bestI].solution[2] << " iteration#: " << iterations << "\r";
 //		cout << "\n Iteration: " << iterations << "\r";
 //		cout << setprecision(10) << "Best solution: " << evaluate() << endl;
 		currentBest = evaluate();
@@ -164,13 +170,14 @@ void readFile(string file)
 				range = make_pair(-2.048, 2.047);
 				N = 2;
 				break;
-			case 3:
+			case 3:									// problem 3
 				range = make_pair(-65.536, 65.535);
 				N = 2;
 				break;
-			case 4:
+			case 4:									// problem 4
 				range = make_pair(-512.0, 511.0);
 				N = 10;
+				break;
 			default:
 				break;
 		}
@@ -275,6 +282,11 @@ pair<Individual, Individual> parentSelection()
 			parents = make_pair(parent1, parent2);		// make the pair
 			return parents;								// return parents pair
 
+		case 'C':
+
+//			parents = ;
+			return crowdSelection();
+
 		default:										// default is tournament selection
 
 			parent1 = tournamentSelection();			// select parent 1 with tournament selection
@@ -324,6 +336,61 @@ Individual tournamentSelectionWeaker()
 	if(candidate1.fitness > candidate2.fitness) return candidate1;
 
 	else return candidate2;
+}
+
+pair<Individual,Individual> crowdSelection()
+{
+	vector<Individual> matingPool(10);
+//	matingPool.reserve(10);
+	vector<int> randArray(10);
+	vector<int> usedNumbers;
+	int randParent1, closest;
+	Individual parent1, parent2;
+
+	pair<Individual,Individual> parents;
+
+	cout << "mating pool size: " << matingPool.size() << endl;
+
+	for(int i=0; i<10; i++)
+	{
+		randArray[i] = rnd.random(populationSize);
+		matingPool[i] = population[randArray[i]];
+	}
+
+	randParent1 = rnd.random(10);
+	parent1 = matingPool[randParent1];
+
+	cout << "parent 1 solution x: " << parent1.solution[0] << " y: " << parent1.solution[1] << endl;
+
+	double distance, bestDistance;
+
+	for(int i=0; i<matingPool.size(); i++)		// loop through the mating pool
+	{
+		Individual parent2 = matingPool[i];
+		if(parent1.number == parent2.number)
+			continue;
+		cout << "parent 2 solution x: " << parent2.solution[0] << " y: " << parent2.solution[1] << endl;
+
+		distance = sqrt( pow(parent1.solution[0] - parent2.solution[0], 2) + pow(parent1.solution[1] - parent2.solution[1], 2) );
+
+		cout << "Distance: " << distance << endl;
+
+		if(i == 0)
+		{
+			bestDistance = distance;
+			closest = i;
+		}
+		else if(distance < bestDistance)
+		{
+			bestDistance = distance;
+			closest = i;
+		}
+	}
+	cout << "Best distance: " << bestDistance << endl;
+
+	parents = make_pair(parent1, matingPool[closest]);
+	
+	return parents;
 }
 
 pair<Individual,Individual> crossover(pair<Individual,Individual> parents)
