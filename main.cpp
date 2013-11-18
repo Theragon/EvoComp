@@ -30,6 +30,7 @@ Individual tournamentSelectionWeaker();
 pair<Individual,Individual> crossover(pair<Individual,Individual> parents);
 pair<Individual,Individual> fixedPointCrossover(pair<Individual,Individual> parents);
 pair<Individual,Individual> randomPointCrossover(pair<Individual,Individual> parents);
+pair<Individual,Individual> twoPointCrossover(pair<Individual,Individual> parents);
 void mutate(pair<Individual,Individual>& children);
 void mutate2(pair<Individual,Individual>& children);
 void replacement(pair<Individual,Individual> children);
@@ -334,6 +335,8 @@ pair<Individual,Individual> crossover(pair<Individual,Individual> parents)
 			return fixedPointCrossover(parents);
 		case 2:
 			return randomPointCrossover(parents);
+        case 3:
+            return twoPointCrossover(parents);
 		default:
 			return randomPointCrossover(parents);
 	}
@@ -386,6 +389,87 @@ pair<Individual,Individual> randomPointCrossover(pair<Individual,Individual> par
 	children = make_pair(child1, child2);
 
 	return children;
+}
+
+pair<Individual,Individual> twoPointCrossover(pair<Individual,Individual> parents)
+{
+    pair<Individual, Individual> children;
+	Individual child1, child2;
+
+	for(int i=0; i<N; i++)
+	{
+		int point1 = rnd.random(0, chromosomeSize);
+		int point2;
+		do
+        {
+            point2 = rnd.random(0, chromosomeSize);
+        }while(point2 == point1);
+
+        if(point1 > point2)
+        {
+            int temp = point1;
+            point1 = point2;
+            point2 = temp;
+        }
+        //cout << "\nP1: " << point1 << " P2: " << point2 << endl;
+        if(point1 < point2)
+        {
+            for(int j=0; j<point1; j++)
+            {
+                child1.chromosomes[i].push_back(parents.first.chromosomes[i][j]);
+                child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);
+            }
+            for(int j=point1; j<point2+1; j++)
+            {
+                child1.chromosomes[i].push_back(parents.second.chromosomes[i][j]);
+                child2.chromosomes[i].push_back(parents.first.chromosomes[i][j]);
+            }
+            for(int j=point2; j<chromosomeSize; j++)
+            {
+                child1.chromosomes[i].push_back(parents.first.chromosomes[i][j]);
+                child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);
+            }
+        }
+	}
+/*
+        cout << "\nP1: ";
+        for(int i = 0; i < N; i++)
+        {
+            for(int j = 0; j < chromosomeSize; j++)
+                cout << parents.first.chromosomes[i][j];
+
+            cout << "    ";
+        }
+        cout << "\nP2: ";
+        for(int i = 0; i < N; i++)
+        {
+            for(int j = 0; j < chromosomeSize; j++)
+                cout << parents.second.chromosomes[i][j];
+
+             cout << "    ";
+        }
+        cout << "\nC1: ";
+        for(int i = 0; i < N; i++)
+        {
+            for(int j = 0; j < chromosomeSize; j++)
+                cout << child1.chromosomes[i][j];
+
+             cout << "    ";
+        }
+        cout << "\nC2: ";
+        for(int i = 0; i < N; i++)
+        {
+            for(int j = 0; j < chromosomeSize; j++)
+                cout << child2.chromosomes[i][j];
+
+             cout << "    ";
+        }
+        cout << endl;
+*/
+	children = make_pair(child1, child2);
+
+	return children;
+
 }
 
 void mutate2(pair<Individual,Individual>& children)
