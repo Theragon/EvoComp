@@ -18,6 +18,7 @@ struct Individual
 	vector<double> solution;
 };
 
+void display();
 void usage();
 void readFile(string file);
 void initialize(vector<Individual>& population);
@@ -102,32 +103,27 @@ int main(int argc, char *argv[])
 		parents = parentSelection();
 		children = crossover(parents);
 		mutate(children);
-//		mutate(children);
 		if(useAge) updateAge(iterations);
 		replacement(children);
 		cout << std::fixed;
-		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " iteration#: " << iterations << "\r";
-
-		currentBest = evaluate();
-		if(iterations == 0)
-			lastBest = currentBest;
-		/*if(iterations % 30000 == 0 && iterations > 0)
-		{
-			cout << "10000 iterations" << endl;
-			cout << "currentBest: " << currentBest << endl;
-			cout << "lastBest: " << lastBest << endl;
-			if(currentBest >= lastBest)
-				done = true;
-			else lastBest = currentBest;
-		}*/
-
+//		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " iteration#: " << iterations << "\r";
+		cout << "#Iterations: " << iterations << " Best solution found: " << evaluate() << "\r";
 		iterations++;
 	}while(!done && iterations < maxIterations);
+
+
 	cout << endl;
-	cout << "currentBest: " << currentBest << endl;
-	cout << "lastBest: " << lastBest << endl;
+	display();
 
     return 0;
+}
+
+void display()
+{
+	for (int i = 0; i < populationSize; i++)
+	{
+		cout << "#" << i << " Fitness: " << population[i].fitness << endl;
+	}
 }
 
 void usage()
@@ -177,6 +173,21 @@ void readFile(string file)
 			default:
 				break;
 		}
+		switch(selectionStrategy)
+		{
+			case 'R':
+				selection = "Random selection";
+				break;
+			case 'T':
+				selection = "Tournament selection";
+				break;
+			case 'C':
+				selection = "Crowd selection";
+				break;
+			default:
+				selection = "Tournament selection";
+				break;
+		}
 		switch(replacementStrategy)					// W, T, R, or O
 		{
 			case 'W':
@@ -194,21 +205,6 @@ void readFile(string file)
 				break;
 			default:
 				replacement = "Replace with tournament selection";
-				break;
-		}
-		switch(selectionStrategy)
-		{
-			case 'R':
-				selection = "Random selection";
-				break;
-			case 'T':
-				selection = "Tournament selection";
-				break;
-			case 'C':
-				selection = "Crowd selection";
-				break;
-			default:
-				selection = "Tournament selection";
 				break;
 		}
 		switch(crossoverStrategy)
@@ -253,6 +249,7 @@ void initialize(vector<Individual>& population)
 	for(int i=0; i<populationSize; i++)	// initialize population
 	{
 		Individual individual;			// create a new individual
+//		individual.chromosomes[] = new vector<int> chromosomes[N];
 		individual.number = i;			// assign the new individual a number
 
 		for(int j=0; j<N; j++)			// loop through the chromosomes array
@@ -380,109 +377,116 @@ Individual tournamentSelectionWeaker()
 
 pair<Individual,Individual> crowdSelection()
 {
-	vector<Individual> matingPool(10);
-	int randParent1, closest;
-	Individual parent1, parent2;
+	vector<Individual> matingPool(10);								// create a vector of size 10 for the mating pool
+	int randParent1, closest;										
+	Individual parent1, candidate;									// create two individuals to become parents
 
-	pair<Individual,Individual> parents;
+	pair<Individual,Individual> parents;							// create a pair to return
 
-	for(int i=0; i<10; i++)
+	for(int i=0; i<10; i++)											// loop through the mating pool
 	{
-		matingPool[i] = population[rnd.random(populationSize)];
+		matingPool[i] = population[rnd.random(populationSize)];		// intialize mating pool with random individuals from the population
 	}
 
-	randParent1 = rnd.random(10);
-	parent1 = matingPool[randParent1];
+	randParent1 = rnd.random(10);									// get a random number
+	parent1 = matingPool[randParent1];								// select parent 1 randomly from mating pool
 
 	double distance, bestDistance;
 
-	for(int i=0; i<matingPool.size(); i++)		// loop through the mating pool
+	for(int i=0; i<matingPool.size(); i++)							// loop through the mating pool
 	{
-		Individual candidate = matingPool[i];
-		if(parent1.number == parent2.number)
-			continue;
+		if(parent1.number == matingPool[i].number)					// if we have two instances of the same individuals
+			continue;												// skip this step in the loop
 
+		candidate = matingPool[i];									// candidate to mate will be the current individual in mating pool
+
+		// calculate distance between parent 1 and the mating candidate
 		distance = sqrt( pow(parent1.solution[0] - candidate.solution[0], 2) + pow(parent1.solution[1] - candidate.solution[1], 2) );
 
-		if(i == 0)
+		if(i == 0)									// if it's the first step in the loop
 		{
-			bestDistance = distance;
-			closest = i;
+			bestDistance = distance;				// best distance set to current distance
+			closest = i;							// index to closest set to current i
 		}
-		else if(distance < bestDistance)
+		else if(distance < bestDistance)			// if distance is less than the best distance
 		{
-			bestDistance = distance;
-			closest = i;
+			bestDistance = distance;				// set best distance to current distance
+			closest = i;							// index to closest set to current i
 		}
 	}
 
-	parents = make_pair(parent1, matingPool[closest]);
+	parents = make_pair(parent1, matingPool[closest]);	// make the pair with parent 1 and the closest candidate
 	
-	return parents;
+	return parents;										// return the pair
 }
 
+// Wrapper function to select correct crossover strategy
 pair<Individual,Individual> crossover(pair<Individual,Individual> parents)
 {
 	switch(crossoverStrategy)
 	{
-		case 'F':
+		case 'F':									// fixed point crossover
 			return fixedPointCrossover(parents);
-		case 'R':
+		case 'R':									// random point crossover
 			return randomPointCrossover(parents);
-        case 'T':
+        case 'T':									// two point crossover
             return twoPointCrossover(parents);
-		default:
-			return twoPointCrossover(parents);
+		default:									// if no argument was provided
+			return twoPointCrossover(parents);		// default is two point crossover
 	}
 }
 
+// Create and return a pair of children with fixed point crossover
 pair<Individual,Individual> fixedPointCrossover(pair<Individual,Individual> parents)
 {
-	pair<Individual, Individual> children;
-	Individual child1, child2;
+	pair<Individual, Individual> children;		// create an empty pair of individuals
+	Individual child1, child2;					// create two new individuals
 
-	for(int i=0; i<N; i++)
-		for(int j=0; j<chromosomeSize/2; j++)
+	for(int i=0; i<N; i++)									// loop through each chromosome
+	{
+		for(int j=0; j<chromosomeSize/2; j++)				// loop from beginning to middle of each chromosome
 		{
-			child1.chromosomes[i].push_back(parents.first.chromosomes[i][j]);
-			child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);
+			child1.chromosomes[i].push_back(parents.first.chromosomes[i][j]);	// give child 1 first five genes of first parent
+			child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);	// give child 2 first five genes of second parent
 		}
 
-	for(int i=0; i<N; i++)
-		for(int j=chromosomeSize/2; j<chromosomeSize; j++)
+	//for(int i=0; i<N; i++)									// loop through each chromosome
+		for(int j=chromosomeSize/2; j<chromosomeSize; j++)	// loop from middle to end of each chromosome
 		{
-			child1.chromosomes[i].push_back(parents.second.chromosomes[i][j]);
-			child2.chromosomes[i].push_back(parents.first.chromosomes[i][j]);
+			child1.chromosomes[i].push_back(parents.second.chromosomes[i][j]);	// give child 1 last five genes of second parent
+			child2.chromosomes[i].push_back(parents.first.chromosomes[i][j]);	// give child 2 last five genes of first parent
 		}
+	}
 
-	children = make_pair(child1, child2);
+	children = make_pair(child1, child2);		// make the pair
 
-	return children;
+	return children;				// return the pair
 }
 
 pair<Individual,Individual> randomPointCrossover(pair<Individual,Individual> parents)
 {
-	pair<Individual, Individual> children;
-	Individual child1, child2;
+	pair<Individual, Individual> children;			// create an empty pair of individuals
+	Individual child1, child2;						// create two new individuals
 
-	for(int i=0; i<N; i++)
+	for(int i=0; i<N; i++)									// loop through each chromosome
 	{
-		int point = rnd.random(0, chromosomeSize);
-		for(int j=0; j<point; j++)
+		int point = rnd.random(0, chromosomeSize);			// get a random number to split chromosome on
+
+		for(int j=0; j<point; j++)									// loop from beginning to the random point of each chromosome
 		{
-			child1.chromosomes[i].push_back(parents.first.chromosomes[i][j]);
-			child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);
+			child1.chromosomes[i].push_back(parents.first.chromosomes[i][j]);	// give child 1 first x number of genes from first parent
+			child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);	// give child 2 first x number of genes from second parent
 		}
-		for(int j=point; j<chromosomeSize; j++)
+		for(int j=point; j<chromosomeSize; j++)						// loop from the random point to end of each chromosome
 		{
-			child1.chromosomes[i].push_back(parents.first.chromosomes[i][j]);
-			child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);
+			child1.chromosomes[i].push_back(parents.first.chromosomes[i][j]);	// give child 1 last x number of genes from first parent
+			child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);	// give child 2 last x number of genes from second parent
 		}
 	}
 
-	children = make_pair(child1, child2);
+	children = make_pair(child1, child2);		// make the pair
 
-	return children;
+	return children;			// return the pair
 }
 
 pair<Individual,Individual> twoPointCrossover(pair<Individual,Individual> parents)
@@ -548,7 +552,7 @@ void mutate(pair<Individual,Individual>& children)
 	}
 }
 
-void fixedMutation(pair<Individual,Individual>& children)
+void randomMutation(pair<Individual,Individual>& children)
 {
 	for(int i=0; i<N; i++)
 		for(int j=0; j<chromosomeSize; j++)
@@ -584,7 +588,7 @@ void fixedMutation(pair<Individual,Individual>& children)
 	children.second.fitness = fitnessCheck(children.second.solution);
 }
 
-void randomMutation(pair<Individual,Individual>& children)
+void fixedMutation(pair<Individual,Individual>& children)
 {
 	int flipBit = rnd.random(chromosomeSize);			// select random "gene" to mutate for child 1
 
