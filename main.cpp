@@ -80,6 +80,7 @@ int maxIterations;
 char mutation;
 double currentBest;
 double lastBest;
+int numberOfIterations;
 
 int main(int argc, char *argv[])
 {
@@ -96,24 +97,46 @@ int main(int argc, char *argv[])
 		readFile(file);
 	}
 
-	initialize(population);
 
-	do
-	{
-		parents = parentSelection();
-		children = crossover(parents);
-		mutate(children);
-		if(useAge) updateAge(iterations);
-		replacement(children);
-		cout << std::fixed;
-//		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " iteration#: " << iterations << "\r";
-		cout << "#Iterations: " << iterations << " Best solution found: " << evaluate() << "\r";
-		iterations++;
-	}while(!done && iterations < maxIterations);
+//	for(int i=0; i<30; i++)
+//	{
+		initialize(population);
+		
+		do
+		{
+			parents = parentSelection();
+			children = crossover(parents);
+			mutate(children);
+			if(useAge) updateAge(iterations);
+			replacement(children);
+			cout << std::fixed;
+	//		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " iteration#: " << iterations << "\r";
+			currentBest = evaluate();
 
+			if(iterations == 0)
+			{
+				lastBest = currentBest;
+				numberOfIterations = 0;
+			}
+			
+			else if(currentBest < lastBest)
+			{
+				lastBest = currentBest;
+				numberOfIterations = iterations;
+			}
+
+			cout << setprecision(9) << "#Iterations: " << iterations << " Best solution found: " << evaluate() << "\r";
+			iterations++;
+		}while(!done && iterations < maxIterations);
+
+//		iterations = 0;
+
+		cout << endl;
+		cout << setprecision(9) << " #Iterations: " << numberOfIterations << " Best solution found: " << lastBest << endl;
+//	}
 
 	cout << endl;
-	display();
+//	display();
 
     return 0;
 }
