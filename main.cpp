@@ -9,18 +9,16 @@
 
 using namespace std;
 
-int N;
 struct Individual
 {
 	int age;
 	int number;
 	double fitness;
-	vector<int> chromosomes[2];
+	vector<int> chromosomes[10];
 	vector<double> solution;
 };
 
-void display();
-void readFile(int& populationSize, int& fitnessFunction);
+void usage();
 void readFile(string file);
 void initialize(vector<Individual>& population);
 pair<Individual, Individual> parentSelection();
@@ -33,7 +31,8 @@ pair<Individual,Individual> fixedPointCrossover(pair<Individual,Individual> pare
 pair<Individual,Individual> randomPointCrossover(pair<Individual,Individual> parents);
 pair<Individual,Individual> twoPointCrossover(pair<Individual,Individual> parents);
 void mutate(pair<Individual,Individual>& children);
-void mutate2(pair<Individual,Individual>& children);
+void fixedMutation(pair<Individual,Individual>& children);
+void randomMutation(pair<Individual,Individual>& children);
 void replacement(pair<Individual,Individual> children);
 void replaceWithTournament(pair<Individual,Individual> children);
 void replaceWeakest(pair<Individual,Individual> children);
@@ -49,6 +48,7 @@ void updateAge(int cycles);
 double f1(const vector<double>& xs);
 double f2(const vector<double>& xs);
 double f3(const vector<double>& xs);
+double rana(const vector<double>& xs);
 vector<int> to_binary(double x, const pair<double,double>& prange, unsigned int num_bits, bool is_gray_coded);
 double from_binary(const vector<int>& bits, const pair<double,double>& prange, bool is_gray_coded);
 
@@ -68,15 +68,15 @@ bool done = false;
 int bestI;
 int weakestI;
 string file;
-
+int N;
 bool gray;
 char replacementStrategy;
 int iterations = 0;
 double mutationRate;
 char selectionStrategy;
-int crossoverStrategy;
+char crossoverStrategy;
 int maxIterations;
-
+char mutation;
 double currentBest;
 double lastBest;
 
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 	cout << "Evolutionary computing!" << endl;
 	if(argc != 2)
 	{
-		cout << "usage" << endl;
+		usage();
 		exit(1);
 	}
 	else
@@ -96,29 +96,22 @@ int main(int argc, char *argv[])
 	}
 
 	initialize(population);
-/*
-	for(int i=0; i<population[0].chromosomes.size(); i++)
-	{
-		cout << "Chromosome " << i << endl;
-	}
-*/
-//	display();
 
 	do
 	{
 		parents = parentSelection();
 		children = crossover(parents);
-		mutate2(children);
+		mutate(children);
+//		mutate(children);
 		if(useAge) updateAge(iterations);
 		replacement(children);
 		cout << std::fixed;
-		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " z:" << population[bestI].solution[2] << " iteration#: " << iterations << "\r";
-//		cout << "\n Iteration: " << iterations << "\r";
-//		cout << setprecision(10) << "Best solution: " << evaluate() << endl;
+		cout << setprecision(10) << "Best solution: " << evaluate() << " x: " << population[bestI].solution[0] << " y:" << population[bestI].solution[1] << " iteration#: " << iterations << "\r";
+
 		currentBest = evaluate();
 		if(iterations == 0)
 			lastBest = currentBest;
-		if(iterations % 10000 == 0 && iterations > 0)
+		/*if(iterations % 30000 == 0 && iterations > 0)
 		{
 			cout << "10000 iterations" << endl;
 			cout << "currentBest: " << currentBest << endl;
@@ -126,134 +119,178 @@ int main(int argc, char *argv[])
 			if(currentBest >= lastBest)
 				done = true;
 			else lastBest = currentBest;
-		}
-/*
-		if(evaluate() == 0.000000000)
-			done = true;
-*/
+		}*/
+
 		iterations++;
 	}while(!done && iterations < maxIterations);
 	cout << endl;
 	cout << "currentBest: " << currentBest << endl;
 	cout << "lastBest: " << lastBest << endl;
 
-//	display();
-
     return 0;
 }
 
-void display()
+void usage()
 {
-	for(int i=0; i<populationSize; i++)
-	{
-		cout << "#" << population[i].number << " -> " << endl;
-		cout << "\tfitness = " << population[i].fitness << endl;
-		for(unsigned int j=0; j<population[i].solution.size(); j++)
-		{
-			cout << "\tsolution : #" << j << " " << population[i].solution[j] << endl;
-		}
-	}
+	cout << "Please provide the config file you want to run as an argument" << endl;
+	cout << "The config file has 9 parameters which are as follows (in this order):" << endl;
+	cout << "Problem number (1-4)" << endl;
+	cout << "Population size (whatever you want)" << endl;
+	cout << "Selection strategy (R for random selection) (T for tournament selection) (C for crowd selection)" << endl;
+	cout << "Use gray coded binary represantation or not (0 for false, 1 for true)" << endl;
+	cout << "Replacement strategy to use (W replace weakest) (T replace with tournament) (R replace random) (O replace oldest)" << endl;
+	cout << "Mutation type (F for fixed one bit mutation) (R for random mutation using mutation rate)" << endl;
+	cout << "Mutation rate (any number from 0 to 1) (only used if R is provided for mutation type)" << endl;
+	cout << "Crossover strategy (F for fixed 1 point crossover) (R for random 1 point crossover) (T for random 2 point crossover)" << endl;
+	cout << "Maximum number of iterations (whatever you want)" << endl;
 }
 
 void readFile(string file)
 {
-	fstream myfile(file.c_str(), ios_base::in);
+	fstream myfile(file.c_str(), ios_base::in);		// create the filestream
 
-    if(myfile >> populationSize >> fitnessFunction >> gray >> replacementStrategy >> mutationRate >> selectionStrategy >> crossoverStrategy >> maxIterations)
+	string selection;
+	string replacement;
+	string crossover;
+
+    if(myfile)
     {
+    	myfile >> fitnessFunction >> populationSize >> selectionStrategy >> gray >> replacementStrategy >> mutation >> mutationRate >> crossoverStrategy >> maxIterations;
 		switch(fitnessFunction)						// problem to solve
 		{
 			case 1:									// problem 1
-				range = make_pair(-5.12 , 5.11);
-				N = 1;
+				range = make_pair(-5.12 , 5.11);	// create the correct range for problem 1
+				N = 1;								// set number of chromosomes
 				break;
 			case 2:									// problem 2
-				range = make_pair(-2.048, 2.047);
-				N = 2;
+				range = make_pair(-2.048, 2.047);	// create the correct range for problem 2
+				N = 2;								// set number of chromosomes
 				break;
 			case 3:									// problem 3
-				range = make_pair(-65.536, 65.535);
-				N = 2;
+				range = make_pair(-65.536, 65.535);	// create the correct range for problem 3
+				N = 2;								// set number of chromosomes
 				break;
 			case 4:									// problem 4
-				range = make_pair(-512.0, 511.0);
-				N = 10;
+				range = make_pair(-512.0, 511.0);	// create the correct range for problem 4
+				N = 10;								// set number of chromosomes
 				break;
 			default:
 				break;
 		}
-		switch(replacementStrategy)
+		switch(replacementStrategy)					// W, T, R, or O
 		{
-			case 'O':
-				useAge = true;
+			case 'W':
+				replacement = "Replace weakest";
+				break;
+			case 'O':								// if replacement strategy is replace oldest
+				useAge = true;						// set useAge to true
+				replacement = "Replace oldest";
+				break;
+			case 'T':
+				replacement = "Replace with tournament selection";
+				break;
+			case 'R':
+				replacement = "Replace random";
 				break;
 			default:
+				replacement = "Replace with tournament selection";
 				break;
+		}
+		switch(selectionStrategy)
+		{
+			case 'R':
+				selection = "Random selection";
+				break;
+			case 'T':
+				selection = "Tournament selection";
+				break;
+			case 'C':
+				selection = "Crowd selection";
+				break;
+			default:
+				selection = "Tournament selection";
+				break;
+		}
+		switch(crossoverStrategy)
+		{
+			case 'F':
+				crossover = "Fixed 1 point crossover";
+				break;
+			case 'R':
+				crossover = "Random 1 point crossover";
+				break;
+			case 'T':
+				crossover = "Random 2 point crossover";
+				break;
+			default:
+				crossover = "Random 2 point crossover";
 		}
     }
     else
     {
 		cout << "Couldn't read from file" << endl;
-		exit(1);
+		usage();
+		exit(1);									// exit the program
 	}
 
+	cout << "Problem: " << fitnessFunction << endl;
 	cout << "Population size: " << populationSize << endl;
-	cout << "problem: " << fitnessFunction << endl;
+	cout << "Selection strategy: " << selection << endl;
 	cout << "Gray coded: " << gray << endl;
-	cout << "Replacement strategy: " << replacementStrategy <<  endl;
+	cout << "Replacement strategy: " << replacement <<  endl;
+	cout << "Mutation type: " << mutation << endl;
 	cout << "Mutation rate: " << mutationRate << endl;
-	cout << "Selection strategy: " << selectionStrategy << endl;
-	cout << "Crossover strategy: " << crossoverStrategy << endl;
+	cout << "Crossover strategy: " << crossover << endl;
 	cout << "Max iterations: " << maxIterations << endl;
-
-//    getchar();
 }
 
+// Initialize the population
 void initialize(vector<Individual>& population)
 {
-	double best;
-	double weakest;
+	double best;						// best fitness value
+	double weakest;						// weakest fitness value
 
 	for(int i=0; i<populationSize; i++)	// initialize population
 	{
-		Individual individual;
-		individual.number = i;
+		Individual individual;			// create a new individual
+		individual.number = i;			// assign the new individual a number
 
-		for(int j=0; j<N; j++)
+		for(int j=0; j<N; j++)			// loop through the chromosomes array
 		{
-			vector<int> chromosome;
-			double tmprnd = rnd.random(range.first, range.second);
-			individual.chromosomes[j] = chromosome;
-			individual.chromosomes[j] = to_binary(tmprnd, range, chromosomeSize, gray);
-			individual.solution.push_back(tmprnd);
+			vector<int> chromosome;															// create a new chromosome vector
+			double tmprnd = rnd.random(range.first, range.second);							// get a new random number in the correct range
+			individual.chromosomes[j] = chromosome;											// put the chromosome vector into the array
+			individual.chromosomes[j] = to_binary(tmprnd, range, chromosomeSize, gray);		// put the binary encoded string into the chromosome vector
+			individual.solution.push_back(tmprnd);											// push the random number
 		}
 
-		individual.fitness = fitnessCheck(individual.solution);
+		individual.fitness = fitnessCheck(individual.solution);								// get the fitness value for the individual
 
-		if(i == 0)								// if it's the first individual
+		if(i == 0)									// if it's the first individual
 		{
-			weakestI = i;
-			weakest = individual.fitness;
-//			weakest = best = individual.fitness;
-			bestI = i;
+			weakestI = i;							// weakest index is the first number
+			weakest = individual.fitness;			// weakest fitness is the first fitness value
+			best = individual.fitness;				// best fitness is the first fitness value
+			bestI = i;								// best index is the first number
 		}
 
-		/*else if(individual.fitness > weakest)
+		else if(individual.fitness > weakest)		// if current individual's fitness is greater than weakest
 		{
-			weakest = individual.fitness;
-			weakestI = i;
-		}*/
-
-		else if(individual.fitness < best)
-		{
-			best = individual.fitness;
-			bestI = i;
+			weakest = individual.fitness;			// set the weakest to current individual's fitness
+			weakestI = i;							// set weakest index to i
 		}
 
-		population.push_back(individual);
+		else if(individual.fitness < best)			// if current individual's fitness is less than best
+		{
+			best = individual.fitness;				// set the best to current individual's fitness
+			bestI = i;								// set best index to i
+		}
+
+		population.push_back(individual);			// push the new individual into the population
 	}
 }
 
+// Wrapper function to select the right parent selection strategy
 pair<Individual, Individual> parentSelection()
 {
 	Individual parent1, parent2;
@@ -261,7 +298,7 @@ pair<Individual, Individual> parentSelection()
 
 	switch(selectionStrategy)							// decide on what selection function to use
 	{
-		case 'R':											// selectionStrategy 1 means parents are selected randomly
+		case 'R':										// selectionStrategy R means parents are selected randomly
 
 			parent1 = randomSelection();				// select parent 1 randomly
 			parent2 = randomSelection();				// select parent 2 randomly
@@ -272,7 +309,7 @@ pair<Individual, Individual> parentSelection()
 			parents = make_pair(parent1, parent2);		// make the pair
 			return parents;								// return parents pair
 
-		case 'T':											// selectionStrategy 2 means parents are selected with tournament selection
+		case 'T':										// selectionStrategy T means parents are selected with tournament selection
 
 			parent1 = tournamentSelection();			// select parent 1 with tournament selection
 			parent2 = tournamentSelection();			// select parent 2 with tournament selection
@@ -283,10 +320,9 @@ pair<Individual, Individual> parentSelection()
 			parents = make_pair(parent1, parent2);		// make the pair
 			return parents;								// return parents pair
 
-		case 'C':
+		case 'C':										// selectionStrategy C means parents are selected with crowd selection
 
-//			parents = ;
-			return crowdSelection();
+			return crowdSelection();					// return a pair of two parents with crowd selection
 
 		default:										// default is tournament selection
 
@@ -301,80 +337,72 @@ pair<Individual, Individual> parentSelection()
 	}
 }
 
+// Select a random individual from the population
 Individual randomSelection()
 {
-	Individual individual;
-	individual = population[rnd.random(populationSize)];
+	Individual individual;									// create a new individual
+	individual = population[rnd.random(populationSize)];	// get a random individual from the population
 
-	return individual;
+	return individual;										// return the individual
 }
 
+// Select an individual with tournament selection
 Individual tournamentSelection()
 {
-	int rand1 = rnd.random(populationSize);
-	int rand2 = rnd.random(populationSize);
+	int rand1 = rnd.random(populationSize);							// get a new random number
+	int rand2 = rnd.random(populationSize);							// get a new random number
 
-	while(rand1 == rand2) rand2 = rnd.random(populationSize);
+	while(rand1 == rand2) rand2 = rnd.random(populationSize);		// while the numbers are the same we get a new random number for rand2
 
-	Individual candidate1 = population[rand1];
-	Individual candidate2 = population[rand2];
+	Individual candidate1 = population[rand1];						// get candidate 1 from population
+	Individual candidate2 = population[rand2];						// get candidate 2 from population
 
-	if(candidate1.fitness < candidate2.fitness) return candidate1;
+	if(candidate1.fitness < candidate2.fitness) return candidate1;	// if candidate 1 has lower fitness value we return candidate 1
 
-	else return candidate2;
+	else return candidate2;											// else, candidate 2 has lower (or equal) and we return candidate 2
 }
 
+// Select an individual to replace with tournament selection
 Individual tournamentSelectionWeaker()
 {
-	int rand1 = rnd.random(populationSize);
-	int rand2 = rnd.random(populationSize);
+	int rand1 = rnd.random(populationSize);							// get a new random number
+	int rand2 = rnd.random(populationSize);							// get a new random number
 
-	while(rand1 == rand2) rand2 = rnd.random(populationSize);
+	while(rand1 == rand2) rand2 = rnd.random(populationSize);		// while the numbers are the same we get a new random number for rand2
 
-	Individual candidate1 = population[rand1];
-	Individual candidate2 = population[rand2];
+	Individual candidate1 = population[rand1];						// get candidate 1 from population
+	Individual candidate2 = population[rand2];						// get candidate 2 from population
 
-	if(candidate1.fitness > candidate2.fitness) return candidate1;
+	if(candidate1.fitness > candidate2.fitness) return candidate1;	// if candidate 1 has higher fitness value we return candidate 1
 
-	else return candidate2;
+	else return candidate2;											// else, candidate 2 has higher (or equal) and we return candidate 2
 }
 
 pair<Individual,Individual> crowdSelection()
 {
 	vector<Individual> matingPool(10);
-//	matingPool.reserve(10);
-	vector<int> randArray(10);
-	vector<int> usedNumbers;
 	int randParent1, closest;
 	Individual parent1, parent2;
 
 	pair<Individual,Individual> parents;
 
-//	cout << "mating pool size: " << matingPool.size() << endl;
-
 	for(int i=0; i<10; i++)
 	{
-		randArray[i] = rnd.random(populationSize);
-		matingPool[i] = population[randArray[i]];
+		matingPool[i] = population[rnd.random(populationSize)];
 	}
 
 	randParent1 = rnd.random(10);
 	parent1 = matingPool[randParent1];
 
-//	cout << "parent 1 solution x: " << parent1.solution[0] << " y: " << parent1.solution[1] << endl;
-
 	double distance, bestDistance;
 
 	for(int i=0; i<matingPool.size(); i++)		// loop through the mating pool
 	{
-		Individual parent2 = matingPool[i];
+		Individual candidate = matingPool[i];
 		if(parent1.number == parent2.number)
 			continue;
-//		cout << "parent 2 solution x: " << parent2.solution[0] << " y: " << parent2.solution[1] << endl;
 
-		distance = sqrt( pow(parent1.solution[0] - parent2.solution[0], 2) + pow(parent1.solution[1] - parent2.solution[1], 2) );
-
-//		cout << "Distance: " << distance << endl;
+		distance = sqrt( pow(parent1.solution[0] - candidate.solution[0], 2) + pow(parent1.solution[1] - candidate.solution[1], 2) );
 
 		if(i == 0)
 		{
@@ -387,7 +415,6 @@ pair<Individual,Individual> crowdSelection()
 			closest = i;
 		}
 	}
-//	cout << "Best distance: " << bestDistance << endl;
 
 	parents = make_pair(parent1, matingPool[closest]);
 	
@@ -398,14 +425,14 @@ pair<Individual,Individual> crossover(pair<Individual,Individual> parents)
 {
 	switch(crossoverStrategy)
 	{
-		case 1:
+		case 'F':
 			return fixedPointCrossover(parents);
-		case 2:
+		case 'R':
 			return randomPointCrossover(parents);
-        case 3:
+        case 'T':
             return twoPointCrossover(parents);
 		default:
-			return randomPointCrossover(parents);
+			return twoPointCrossover(parents);
 	}
 }
 
@@ -478,7 +505,7 @@ pair<Individual,Individual> twoPointCrossover(pair<Individual,Individual> parent
             point1 = point2;
             point2 = temp;
         }
-        //cout << "\nP1: " << point1 << " P2: " << point2 << endl;
+
         if(point1 < point2)
         {
             for(int j=0; j<point1; j++)
@@ -498,48 +525,30 @@ pair<Individual,Individual> twoPointCrossover(pair<Individual,Individual> parent
             }
         }
 	}
-/*
-        cout << "\nP1: ";
-        for(int i = 0; i < N; i++)
-        {
-            for(int j = 0; j < chromosomeSize; j++)
-                cout << parents.first.chromosomes[i][j];
 
-            cout << "    ";
-        }
-        cout << "\nP2: ";
-        for(int i = 0; i < N; i++)
-        {
-            for(int j = 0; j < chromosomeSize; j++)
-                cout << parents.second.chromosomes[i][j];
-
-             cout << "    ";
-        }
-        cout << "\nC1: ";
-        for(int i = 0; i < N; i++)
-        {
-            for(int j = 0; j < chromosomeSize; j++)
-                cout << child1.chromosomes[i][j];
-
-             cout << "    ";
-        }
-        cout << "\nC2: ";
-        for(int i = 0; i < N; i++)
-        {
-            for(int j = 0; j < chromosomeSize; j++)
-                cout << child2.chromosomes[i][j];
-
-             cout << "    ";
-        }
-        cout << endl;
-*/
 	children = make_pair(child1, child2);
 
 	return children;
 
 }
 
-void mutate2(pair<Individual,Individual>& children)
+void mutate(pair<Individual,Individual>& children)
+{
+	switch(mutation)
+	{
+		case 'R':
+			randomMutation(children);
+			break;
+		case 'F':
+			fixedMutation(children);
+			break;
+		default:
+			randomMutation(children);
+			break;
+	}
+}
+
+void fixedMutation(pair<Individual,Individual>& children)
 {
 	for(int i=0; i<N; i++)
 		for(int j=0; j<chromosomeSize; j++)
@@ -575,7 +584,7 @@ void mutate2(pair<Individual,Individual>& children)
 	children.second.fitness = fitnessCheck(children.second.solution);
 }
 
-void mutate(pair<Individual,Individual>& children)
+void randomMutation(pair<Individual,Individual>& children)
 {
 	int flipBit = rnd.random(chromosomeSize);			// select random "gene" to mutate for child 1
 
@@ -677,6 +686,10 @@ void replacement(pair<Individual,Individual> children)
 
 		case 'O':
 			replaceOldest(children);
+			break;
+
+		default:
+			replaceWithTournament(children);
 			break;
 	}
 }
@@ -851,6 +864,9 @@ double fitnessCheck(vector<double> solution)
 		case 3:
 			return f3(solution);
 			break;
+		case 4:
+			return rana(solution);
+			break;
 		default:
 			return 0.0;
 			break;
@@ -935,6 +951,33 @@ double f3(const vector<double>& xs)
 	}
 
 	return 500.0 - (1.0 / (0.002 + sum) );
+}
+
+// Rana’s F2 function
+// Minimize f ( ̄) = big complicated thing...
+// N = 10
+// −512.0 ≤ xi ≤ 511.0
+// Optimum value f ( ̄) ≈ −511
+double rana(const vector<double>& xs)
+{
+	const double RANA_WEIGHTS[]= {0.3489, 0.1848, 0.3790, 0.4386,
+								  0.9542, 0.1430, 0.7849, 0.3689,
+								  0.9767, 0.8163};
+
+	const double RANA_SUM_WEIGHTS=5.3953;
+	double sum=0.0;
+
+	for(unsigned int i=0; i<xs.size(); ++i)
+	{
+		double x1 = xs[i];
+		double x2 = xs[(i+1) % xs.size()];
+		sum += RANA_WEIGHTS[i] * (x1 * sin(sqrt(fabs(x2 + 1.0 - x1))) *
+		cos(sqrt(fabs(x1 + x2 + 1.0))) + (x2 + 1.0) *
+		cos(sqrt(fabs(x2 + 1.0 - x1))) *
+		sin(sqrt(fabs(x1 + x2 + 1.0))));
+	}
+
+	return sum / RANA_SUM_WEIGHTS;
 }
 
 
