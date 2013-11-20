@@ -14,6 +14,7 @@ struct Individual
 	int age;
 	int number;
 	double fitness;
+	bool tabu;
 	vector<int> chromosomes[10];
 	vector<double> solution;
 };
@@ -23,6 +24,7 @@ void usage();
 void readFile(string file);
 void initialize(vector<Individual>& population);
 pair<Individual, Individual> parentSelection();
+Individual tabuSelection();
 Individual randomSelection();
 Individual tournamentSelection();
 Individual tournamentSelectionWeaker();
@@ -38,7 +40,9 @@ void replacement(pair<Individual,Individual> children);
 void replaceWithTournament(pair<Individual,Individual> children);
 void replaceWeakest(pair<Individual,Individual> children);
 void replaceRandom(pair<Individual,Individual> children);
+void replaceRandom2(pair<Individual,Individual> children);
 void replaceOldest(pair<Individual,Individual> children);
+void replaceFirstWeaker(pair<Individual,Individual> children);
 Individual oldest();
 Individual weakestLink();
 Individual fittest();
@@ -84,7 +88,6 @@ int numberOfIterations;
 
 int main(int argc, char *argv[])
 {
-	rnd.seed_random(time(NULL));
 	cout << "Evolutionary computing!" << endl;
 	if(argc != 2)
 	{
@@ -93,13 +96,11 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
+		rnd.seed_random(time(NULL));
 		file = argv[1];
 		readFile(file);
 	}
 
-
-//	for(int i=0; i<30; i++)
-//	{
 		initialize(population);
 		
 		do
@@ -129,13 +130,10 @@ int main(int argc, char *argv[])
 			iterations++;
 		}while(!done && iterations < maxIterations);
 
-//		iterations = 0;
-
 		cout << endl;
 		cout << setprecision(9) << " #Iterations: " << numberOfIterations << " Best solution found: " << lastBest << endl;
-//	}
 
-	cout << endl;
+//	cout << endl;
 //	display();
 
     return 0;
@@ -146,6 +144,7 @@ void display()
 	for (int i = 0; i < populationSize; i++)
 	{
 		cout << "#" << i << " Fitness: " << population[i].fitness << endl;
+		cout << "#" << i << " tabu: " << population[i].tabu << endl;
 	}
 }
 
@@ -226,6 +225,9 @@ void readFile(string file)
 			case 'R':
 				replacement = "Replace random";
 				break;
+			case 'F':
+				replacement = "Replace first weaker";
+				break;
 			default:
 				replacement = "Replace with tournament selection";
 				break;
@@ -274,6 +276,7 @@ void initialize(vector<Individual>& population)
 		Individual individual;			// create a new individual
 //		individual.chromosomes[] = new vector<int> chromosomes[N];
 		individual.number = i;			// assign the new individual a number
+		individual.tabu = false;
 
 		for(int j=0; j<N; j++)			// loop through the chromosomes array
 		{
@@ -326,6 +329,9 @@ pair<Individual, Individual> parentSelection()
 			while(parent1.number == parent2.number)		// while we have the same parents
 				parent2 = randomSelection();			// select a new random parent 2
 
+			parent1.tabu = true;
+			parent2.tabu = true;
+
 			parents = make_pair(parent1, parent2);		// make the pair
 			return parents;								// return parents pair
 
@@ -344,6 +350,14 @@ pair<Individual, Individual> parentSelection()
 
 			return crowdSelection();					// return a pair of two parents with crowd selection
 
+		case 'A':
+
+			parent1 = tabuSelection();
+			parent2 = tabuSelection();
+
+			parents = make_pair(parent1, parent2);
+			return parents;
+
 		default:										// default is tournament selection
 
 			parent1 = tournamentSelection();			// select parent 1 with tournament selection
@@ -355,6 +369,25 @@ pair<Individual, Individual> parentSelection()
 			parents = make_pair(parent1, parent2);		// make the pair
 			return parents;								// return parents pair
 	}
+}
+
+Individual tabuSelection()
+{
+	Individual individual;
+
+	for(int i=0; i<populationSize; i++)
+	{
+		if(!population[i].tabu)
+		{
+			individual = population[i];
+			individual.tabu = true;
+			break;
+		}
+	}
+
+//	cout << "Individual to return tabu: " << individual.tabu << endl;
+
+	return individual;
 }
 
 // Select a random individual from the population
@@ -418,13 +451,29 @@ pair<Individual,Individual> crowdSelection()
 
 	for(int i=0; i<matingPool.size(); i++)							// loop through the mating pool
 	{
-		if(parent1.number == matingPool[i].number)					// if we have two instances of the same individuals
+		if(parent1.number == matingPool[i].number)					// if we have two instances of the same individual
 			continue;												// skip this step in the loop
 
 		candidate = matingPool[i];									// candidate to mate will be the current individual in mating pool
 
 		// calculate distance between parent 1 and the mating candidate
+		if(N == 2)
 		distance = sqrt( pow(parent1.solution[0] - candidate.solution[0], 2) + pow(parent1.solution[1] - candidate.solution[1], 2) );
+/*
+		else if(N == 10)
+		distance = sqrt( pow(parent1.solution[0] - candidate.solution[0], 2) + pow(parent1.solution[1] - candidate.solution[1], 2) +
+						 pow(parent1.solution[2] - candidate.solution[2], 2) + pow(parent1.solution[3] - candidate.solution[3], 2) +
+						 pow(parent1.solution[4] - candidate.solution[4], 2) + pow(parent1.solution[5] - candidate.solution[5], 2) +
+						 pow(parent1.solution[6] - candidate.solution[6], 2) + pow(parent1.solution[7] - candidate.solution[7], 2) +
+						 pow(parent1.solution[8] - candidate.solution[8], 2) + pow(parent1.solution[9] - candidate.solution[9], 2) );
+*/
+		// if 10 dimensions calculate the minkowski distance between parent 1 and the mating candidate
+		else if(N == 10)
+		distance = pow( pow(parent1.solution[0] - candidate.solution[0], 10) + pow(parent1.solution[1] - candidate.solution[1], 10) +
+						 pow(parent1.solution[2] - candidate.solution[2], 10) + pow(parent1.solution[3] - candidate.solution[3], 10) +
+						 pow(parent1.solution[4] - candidate.solution[4], 10) + pow(parent1.solution[5] - candidate.solution[5], 10) +
+						 pow(parent1.solution[6] - candidate.solution[6], 10) + pow(parent1.solution[7] - candidate.solution[7], 10) +
+						 pow(parent1.solution[8] - candidate.solution[8], 10) + pow(parent1.solution[9] - candidate.solution[9], 10), 1/10);
 
 		if(i == 0)									// if it's the first step in the loop
 		{
@@ -481,6 +530,9 @@ pair<Individual,Individual> fixedPointCrossover(pair<Individual,Individual> pare
 		}
 	}
 
+	child1.tabu = false;
+	child2.tabu = false;
+
 	children = make_pair(child1, child2);		// make the pair
 
 	return children;				// return the pair
@@ -506,6 +558,9 @@ pair<Individual,Individual> randomPointCrossover(pair<Individual,Individual> par
 			child2.chromosomes[i].push_back(parents.second.chromosomes[i][j]);	// give child 2 last x number of genes from second parent
 		}
 	}
+
+	child1.tabu = false;
+	child2.tabu = false;
 
 	children = make_pair(child1, child2);		// make the pair
 
@@ -552,6 +607,9 @@ pair<Individual,Individual> twoPointCrossover(pair<Individual,Individual> parent
             }
         }
 	}
+
+	child1.tabu = false;
+	child2.tabu = false;
 
 	children = make_pair(child1, child2);
 
@@ -708,11 +766,16 @@ void replacement(pair<Individual,Individual> children)
 			break;
 
 		case 'R':
-			replaceRandom(children);
+//			replaceRandom(children);
+			replaceRandom2(children);
 			break;
 
 		case 'O':
 			replaceOldest(children);
+			break;
+
+		case 'F':
+			replaceFirstWeaker(children);
 			break;
 
 		default:
@@ -824,16 +887,64 @@ void replaceRandom(pair<Individual,Individual> children)
 	population[rand2] = children.second;
 }
 
+void replaceRandom2(pair<Individual,Individual> children)
+{
+	Individual toReplace1, toReplace2;
+
+	toReplace1 = population[rnd.random(populationSize)];
+
+	if(children.first.fitness < toReplace1.fitness)
+	{
+		children.first.number = toReplace1.number;
+		population[toReplace1.number] = children.first;
+	}
+
+	toReplace2 = population[rnd.random(populationSize)];
+
+	if(children.second.fitness < toReplace2.fitness)
+	{
+		children.second.number = toReplace2.number;
+		population[toReplace2.number] = children.second;
+	}
+}
+
 void replaceOldest(pair<Individual,Individual> children)
 {
 	Individual toReplace = oldest();
 
-	children.first.number = toReplace.number;
-	population[toReplace.number] = children.first;
+	if(children.first.fitness < toReplace.fitness)
+	{
+		children.first.number = toReplace.number;
+		population[toReplace.number] = children.first;	
+	}
 
 	toReplace = oldest();
-	children.second.number = toReplace.number;
-	population[toReplace.number] = children.second;
+	if(children.second.fitness < toReplace.fitness)
+	{
+		children.second.number = toReplace.number;
+		population[toReplace.number] = children.second;
+	}
+}
+
+void replaceFirstWeaker(pair<Individual,Individual> children)
+{
+	for (int i=0; i<populationSize; i++)
+	{
+		if(children.first.fitness < population[i].fitness)
+		{
+			children.first.number = population[i].number;
+			population[i] = children.first;
+		}
+	}
+
+	for (int i=0; i<populationSize; i++)
+	{
+		if(children.second.fitness < population[i].fitness)
+		{
+			children.second.number = population[i].number;
+			population[i] = children.second;
+		}
+	}
 }
 
 Individual oldest()
